@@ -564,7 +564,7 @@ def plot(dirt_locations, obstacles, start, path=None):
 
     # Plot path if available
     if path:
-        path = np.array([start] + path)
+        path = np.array(path)
         plt.plot(path[:, 0], path[:, 1], 'b-', linewidth=LINE_WIDTH, label='Path')
 
 
@@ -651,8 +651,11 @@ def run(dirt_locations: List[Tuple[int, int]], starts: List[tuple], obstacles: n
 
     solver = NewRRTSolver(np.array(starts), goal_sources, bounds, P, STEP_SIZE, is_coords_valid, to_avoid)
 
+
     for _ in tqdm(range(MAX_ITERATIONS_OUR)):
         solver.random_expend_tree()
+
+    print(set([item for sublist in list(solver.tree_connections.keys()) for item in sublist]))
 
     for i in range(len(dirt_locations) + len(starts)):
         connection_keys = list(solver.tree_connections.keys())
@@ -662,7 +665,6 @@ def run(dirt_locations: List[Tuple[int, int]], starts: List[tuple], obstacles: n
             connection_keys = list(solver.tree_connections.keys())
             flattened = [item for sublist in connection_keys for item in sublist]
 
-    print(solver.tree_connections.keys())
 
     bot_ways = tsp_multi_agent(dirt_locations, starts, solver)
 
@@ -702,9 +704,10 @@ def run(dirt_locations: List[Tuple[int, int]], starts: List[tuple], obstacles: n
         plt.plot(dirt[0], dirt[1], 'ro', markersize=DUST_RADIUS, label='Dirt')
 
     # Plot the results
-    for i, path in enumerate(paths):
-        print(f'Final path for {i + 1}th agent: {path}')
-        plot(dirt_locations, obstacles, starts[i], path=path)
-    plt.legend
+    for i in range(len(paths)):
+        paths[i] = [starts[i]] + paths[i]
+        print(f'Final path for {i + 1}th agent: {paths[i]}')
+        plot(dirt_locations, obstacles, starts[i], path=paths[i])
+    plt.legend()
     plt.show()
-    return total_path
+    return paths

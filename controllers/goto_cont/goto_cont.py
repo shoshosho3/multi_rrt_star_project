@@ -125,6 +125,19 @@ class GotoRobot:
             self.receiver.nextPacket()  # Move to next packet in the queue
         return dust_locations
 
+    def receive_path(self, start):
+        while self.receiver.getQueueLength() > 0:
+            message = self.receiver.getString()
+            paths = ast.literal_eval(message)  # Convert string back to list
+            print(f"Received paths: {paths}, start: {start}")
+            for path in paths:
+                x1, y1 = path[0]
+                x2, y2 = start
+                if abs(x1 - x2) <= 1 and abs(y1 - y2) <= 1:
+                    return path
+            self.receiver.nextPacket()  # Move to next packet in the queue
+        return None
+
 
 def create_wall():
     obstacles_matrix = np.zeros((FLOOR_LENGTH, FLOOR_LENGTH))
@@ -146,16 +159,21 @@ if __name__ == "__main__":
 
     robot = GotoRobot()
     robot.passive_wait(WAIT_TIME)
-    locs = robot.receive_dust_locations()
     obstacles = create_wall()
-    start = gps_to_floor(robot.get_gps_position())
+    path = robot.receive_path(gps_to_floor(robot.get_gps_position()))
+    additional_time = 0
+    while path is None:
+        robot.passive_wait(WAIT_TIME + additional_time)
+        additional_time += 1
+        path = robot.receive_path(gps_to_floor(robot.get_gps_position()))
+    # start = gps_to_floor(robot.get_gps_position())
     # start = (100, 100)
     # locs = [(53, 448), (244, 179), (254, 279)]
     # path = gpt_rrt_star.run(locs, start, obstacles)
-    path = our_alg.run(locs, start, obstacles)
+    # path = our_alg.run(locs, start, obstacles)
+    # path = robot.receive_path(start)
+    print(f"Path: {path}")
 
     for loc in path:
         next_pos = floor_to_gps(loc)
         robot.goto(next_pos)
-        if next_pos in locs:
-            print(f'got target at {next_pos}')

@@ -1,0 +1,195 @@
+#VRML_SIM R2023b utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/lights/protos/CeilingLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/apartment_structure/protos/Wall.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/paintings/protos/LandscapePainting.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/create_wall/protos/CreateWall.proto"
+EXTERNPROTO "../protos/Create.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/appearances/protos/Parquetry.proto"
+
+WorldInfo {
+  info [
+    "iRobot Create simulation"
+    "The vacuum cleaner robot goes randomly into the apartment while a supervisor tracks its position and alterates the ground texture."
+    "The robot can be stopped by the virtual walls emitting IR light."
+  ]
+  title "iRobot Create"
+}
+Viewpoint {
+  orientation -0.5049289964988191 0.5255416773268665 0.6847281605769984 1.9032263622904313
+  position -1.1425975609053256 -4.71355056848947 20.459735104183302
+  near 0.1
+  follow "robot"
+  followType "None"
+}
+TexturedBackground {
+}
+CeilingLight {
+  translation 1.82639 -1.97685 2.4
+  pointLightColor 1 1 0.9372549019607843
+  pointLightIntensity 7
+}
+CeilingLight {
+  translation 1.82639 2.67 2.4
+  name "ceiling light(2)"
+  pointLightColor 1 1 0.9372549019607843
+  pointLightIntensity 7
+}
+CeilingLight {
+  translation -3.2 2.05 2.4
+  name "ceiling light(1)"
+  pointLightColor 1 1 0.9372549019607843
+  pointLightIntensity 7
+}
+CeilingLight {
+  translation -3.2 -2.51 2.4
+  name "ceiling light(3)"
+  pointLightColor 1 1 0.9372549019607843
+  pointLightIntensity 7
+}
+Wall {
+  translation 5 0 0
+  size 0.3 10.3 2.4
+}
+Wall {
+  translation 0 5 0
+  rotation 0 0 1 1.5708
+  name "wall(2)"
+  size 0.3 9.7 2.4
+}
+Wall {
+  translation -5 0 0
+  name "wall(3)"
+  size 0.3 10.3 2.4
+}
+Wall {
+  translation 0 -5 0
+  rotation 0 0 1 1.5708
+  name "wall(4)"
+  size 0.3 9.7 2.4
+}
+Wall {
+  translation -1.65 2.675 0
+  name "wall(5)"
+  size 0.3 4.3 2.4
+}
+Wall {
+  translation -1.65 -2.69 0
+  name "wall(6)"
+  size 0.3 4.3 2.4
+}
+LandscapePainting {
+  translation 0.292736 -4.77308 1.5
+  rotation 0 0 1 1.5708
+}
+CreateWall {
+  translation -4.759116357118464 3.167421913306873 -7.846785811795737e-05
+  rotation -0.0003103553614600866 -1.8366024532988197e-06 0.9999999518380871 0.011835343230181644
+}
+DEF IROBOT_CREATE Create {
+  hidden position_0_0 1030.3004511694191
+  hidden position_0_1 969.9559895458337
+  hidden rotation_4 0 1 0 2.1821358848318253
+  hidden rotation_5 0 1 0 3.515941782580191
+  hidden translation_8 23.2598479436901 -6.229496848167001 -0.03540886683464963
+  hidden rotation_8 0.8393739335399798 -0.41986918145299623 -0.34519743649049933 1.3067161946273442
+  hidden translation_9 -7.177052729900879e-09 -4.5374811241671864e-08 -1.882923066508224e-05
+  hidden rotation_9 -0.30254198671706906 0.673965970438922 0.673971970458424 -2.554029000072155
+  hidden translation_10 -1.702250429502783e-08 -9.055973637650538e-09 -1.2549699936865999e-05
+  hidden rotation_10 -0.3025419867301652 0.6739659704469206 0.6739719704445468 -2.554028999993916
+  translation 3.839973749122838 -2.0745813317558737 0.04420538217956023
+  rotation -0.0011964818029949866 0.003927599650549018 0.9999915711606173 -0.3876731760188781
+  controller "goto_cont"
+  controllerArgs [
+    "a:1;"
+  ]
+  bodySlot [
+    Receiver {
+      name "receiver(1)"
+      channel 1
+    }
+    Compass {
+    }
+    GPS {
+    }
+  ]
+}
+DEF IROBOT_CREATE_2 Create {
+  hidden position_0_0 1030.3004511694191
+  hidden position_0_1 969.9559895458337
+  hidden rotation_4 0 1 0 2.1821358848318253
+  hidden rotation_5 0 1 0 3.515941782580191
+  hidden translation_8 23.2598479436901 -6.229496848167001 -0.03540886683464963
+  hidden rotation_8 0.8393739335399798 -0.41986918145299623 -0.34519743649049933 1.3067161946273442
+  hidden translation_9 -7.177052729900879e-09 -4.5374811241671864e-08 -1.882923066508224e-05
+  hidden rotation_9 -0.30254198671706906 0.673965970438922 0.673971970458424 -2.554029000072155
+  hidden translation_10 -1.702250429502783e-08 -9.055973637650538e-09 -1.2549699936865999e-05
+  hidden rotation_10 -0.3025419867301652 0.6739659704469206 0.6739719704445468 -2.554028999993916
+  translation 4.34445 -1.08398 0.145
+  rotation -0.001196469486691379 0.003927648314962678 0.9999915709842164 -0.3876753071795864
+  name "Create(1)"
+  controller "goto_cont"
+  controllerArgs [
+    "a:1;"
+  ]
+  bodySlot [
+    Receiver {
+      name "receiver(1)"
+      channel 1
+    }
+    Compass {
+    }
+    GPS {
+    }
+  ]
+}
+Robot {
+  children [
+    Emitter {
+      channel 1
+    }
+    Shape {
+      appearance Parquetry {
+        textureTransform TextureTransform {
+          scale 7 7
+        }
+      }
+      geometry Plane {
+        size 10 10
+      }
+    }
+    Display {
+      translation 0 0 0.01
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColorMap ImageTexture {
+              url [
+                "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/robots/irobot/create/controllers/ground/dust.jpg"
+              ]
+            }
+            transparency 0.9
+            roughness 0.5
+            metalness 0
+          }
+          geometry Plane {
+            size 9.9 9.9
+          }
+        }
+      ]
+      name "ground_display"
+      width 512
+      height 512
+    }
+  ]
+  boundingObject Plane {
+    size 9.9 9.9
+  }
+  locked TRUE
+  controller "my_ground"
+  supervisor TRUE
+  battery [
+    10763.12000000247, 13478, 18.72
+  ]
+}
