@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import random
 import math
 from itertools import permutations
 from tqdm import tqdm
@@ -531,13 +530,19 @@ def create_obstacle_matrix():
     return obstacle_matrix
 
 
-def plot(dirt_locations, obstacles, start, path=None):
-    plt.plot(start[0], start[1], 'go', markersize=10, label='Start')
+def plot(i, start, path=None):
+    if i ==0:
+        plt.plot(start[0], start[1], 'go', markersize=10, label='Start')
+    else:
+        plt.plot(start[0], start[1], 'go', markersize=10)
 
     # Plot path if available
     if path:
         path = np.array(path)
-        plt.plot(path[:, 0], path[:, 1], 'b-', linewidth=LINE_WIDTH, label='Path')
+        if i == 0:
+            plt.plot(path[:, 0], path[:, 1], 'b-', linewidth=LINE_WIDTH, label='Path')
+        else:
+            plt.plot(path[:, 0], path[:, 1], 'b-', linewidth=LINE_WIDTH)
 
 
 # def tsp(dirt_locations, start):
@@ -626,8 +631,6 @@ def run(dirt_locations: List[Tuple[int, int]], starts: List[tuple], obstacles: n
     for _ in tqdm(range(MAX_ITERATIONS_OUR)):
         solver.random_expend_tree()
 
-    print(set([item for sublist in list(solver.tree_connections.keys()) for item in sublist]))
-
     for i in range(len(dirt_locations) + len(starts)):
         connection_keys = list(solver.tree_connections.keys())
         flattened = [item for sublist in connection_keys for item in sublist]
@@ -670,14 +673,17 @@ def run(dirt_locations: List[Tuple[int, int]], starts: List[tuple], obstacles: n
                 plt.plot(i, j, 'ks', markersize=WALL_WIDTH)
 
     # Plot dirt locations
-    for dirt in dirt_locations:
-        plt.plot(dirt[0], dirt[1], 'ro', markersize=DUST_RADIUS, label='Dirt')
+    for i, dirt in enumerate(dirt_locations):
+        if i == 0:
+            plt.plot(dirt[0], dirt[1], 'ro', markersize=DUST_RADIUS, label='Dirt')
+        else:
+            plt.plot(dirt[0], dirt[1], 'ro', markersize=DUST_RADIUS)
 
     # Plot the results
     for i in range(len(paths)):
         paths[i] = [starts[i]] + paths[i]
         print(f'Final path for {i + 1}th agent: {paths[i]}')
-        plot(dirt_locations, obstacles, starts[i], path=paths[i])
+        plot(i, starts[i], path=paths[i])
     plt.legend()
     plt.show()
     return paths

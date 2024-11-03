@@ -20,17 +20,25 @@ def create_dust(display, obstacles):
         display.imagePaste(background, x - 10, y - 10, False)
     return patches
 
+
 def floor_to_gps(floor):
     return (floor[0] / FLOOR_LENGTH * GPS_LENGTH - FLOOR_ADD), (FLOOR_ADD - (floor[1] / FLOOR_LENGTH * GPS_LENGTH))
 
-def robot_position(robot, obstacles):
+
+def distance(p1, p2):
+    return np.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+
+
+def robot_position(robot, obstacles, prev_robots):
     x = random.randint(50, 463)
     y = random.randint(50, 463)
-    while obstacles[x][y] == HAS_OBSTACLE:
+    while (obstacles[x][y] == HAS_OBSTACLE or
+           any([distance((x, y), prev_robot) < ROBOT_START_MIN_DISTANCE for prev_robot in prev_robots])):
         x = random.randint(50, 463)
         y = random.randint(50, 463)
     x, y = floor_to_gps((x, y))
     robot.getField("translation").setSFVec3f([x, y, 0.044])
+    return x, y
 
 
 def battery_handle(robot, prev_bat):
@@ -50,13 +58,11 @@ def create_wall(delta):
 
 
 def sim_loop(robot, display, translation_field):
-
     while robot.step(TIME_STEP) != TERMINATE_TIME_STEP:
 
         translations = [translation_field.getSFVec3f() for translation_field in translation_field]
 
         for translation in translations:
-
             # Calculate the position on the display and draw an oval
             x = int(FLOOR_LENGTH * (translation[0] + GROUND_X / 2) / GROUND_X)
             y = int(FLOOR_LENGTH * (-translation[1] + GROUND_Y / 2) / GROUND_Y)
@@ -75,6 +81,7 @@ def get_robot_names(supervisor):
             robot_names.append(node.getDef())  # Get the DEF name (robot name)
 
     return robot_names
+
 
 def gps_to_floor(gps):
     return int((gps[0] + FLOOR_ADD) / GPS_LENGTH * FLOOR_LENGTH), int((FLOOR_ADD - gps[1]) / GPS_LENGTH * FLOOR_LENGTH)
@@ -95,8 +102,9 @@ def main():
     my_bots = [robot.getFromDef("IROBOT_CREATE"), robot.getFromDef("IROBOT_CREATE_2")]
     # names = get_robot_names(robot)
     # my_bots = [robot.getFromDef(name) for name in names]
+    prev_bots = []
     for mybot in my_bots:
-        robot_position(mybot, obstacles)
+        prev_bots.append(robot_position(mybot, obstacles, prev_bots))
     translation_fields = [mybot.getField("translation") for mybot in my_bots]
     starts = [gps_to_floor(tuple(translation_field.getSFVec3f()[0:2])) for translation_field in translation_fields]
 

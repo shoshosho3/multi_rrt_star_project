@@ -3,7 +3,6 @@ from controller import Robot
 import math
 import ast
 import gpt_rrt_star
-import our_alg
 from consts import *
 
 
@@ -129,7 +128,8 @@ class GotoRobot:
         while self.receiver.getQueueLength() > 0:
             message = self.receiver.getString()
             paths = ast.literal_eval(message)  # Convert string back to list
-            print(f"Received paths: {paths}, start: {start}")
+            name = self.robot.getName()
+            print(f"Received paths: {name}")
             for path in paths:
                 x1, y1 = path[0]
                 x2, y2 = start
@@ -166,13 +166,6 @@ if __name__ == "__main__":
         robot.passive_wait(WAIT_TIME + additional_time)
         additional_time += 1
         path = robot.receive_path(gps_to_floor(robot.get_gps_position()))
-    # start = gps_to_floor(robot.get_gps_position())
-    # start = (100, 100)
-    # locs = [(53, 448), (244, 179), (254, 279)]
-    # path = gpt_rrt_star.run(locs, start, obstacles)
-    # path = our_alg.run(locs, start, obstacles)
-    # path = robot.receive_path(start)
-    print(f"Path: {path}")
 
     for loc in path:
         next_pos = floor_to_gps(loc)
