@@ -442,33 +442,6 @@ class NewRRTSolver:
                 return False
         return True
 
-    # def check_collision(self, coords1, coords2):
-    #     """
-    #     Checks the path from coords1 to coords2 for collisions in steps of size collision_step_size.
-    #
-    #     Parameters:
-    #     coords1 (np.array): Starting coordinates.
-    #     coords2 (np.array): Target coordinates.
-    #
-    #     Returns:
-    #     bool: True if the path is collision-free, False if there is a collision.
-    #     """
-    #     # Calculate the direction vector and distance
-    #     direction = coords2 - coords1
-    #     distance = np.linalg.norm(direction)
-    #
-    #     # Normalize the direction
-    #     direction /= distance
-    #
-    #     # Step along the line from coords1 to coords2, checking each point
-    #     num_steps = int(distance // self.collision_step_size)
-    #     for step in range(num_steps):
-    #         point = coords1 + step * self.collision_step_size * direction
-    #         if not self.is_coords_valid(point):
-    #             return False  # Collision detected at this point
-    #
-    #     return True  # Path is collision-free
-
     def check_collision(self, coords1, coords2):
         x1, y1 = coords1
         x2, y2 = coords2
@@ -559,7 +532,6 @@ def create_obstacle_matrix():
 
 
 def plot(dirt_locations, obstacles, start, path=None):
-
     plt.plot(start[0], start[1], 'go', markersize=10, label='Start')
 
     # Plot path if available
@@ -651,7 +623,6 @@ def run(dirt_locations: List[Tuple[int, int]], starts: List[tuple], obstacles: n
 
     solver = NewRRTSolver(np.array(starts), goal_sources, bounds, P, STEP_SIZE, is_coords_valid, to_avoid)
 
-
     for _ in tqdm(range(MAX_ITERATIONS_OUR)):
         solver.random_expend_tree()
 
@@ -664,7 +635,6 @@ def run(dirt_locations: List[Tuple[int, int]], starts: List[tuple], obstacles: n
             solver.random_expend_tree()
             connection_keys = list(solver.tree_connections.keys())
             flattened = [item for sublist in connection_keys for item in sublist]
-
 
     bot_ways = tsp_multi_agent(dirt_locations, starts, solver)
 

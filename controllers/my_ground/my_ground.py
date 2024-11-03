@@ -99,8 +99,6 @@ def main():
         robot_position(mybot, obstacles)
     translation_fields = [mybot.getField("translation") for mybot in my_bots]
     starts = [gps_to_floor(tuple(translation_field.getSFVec3f()[0:2])) for translation_field in translation_fields]
-    print(f'starts: {starts}')
-    print(f'translation_fields: {translation_fields}')
 
     patch_centers = create_dust(display, obstacles)
     paths = our_alg.run(patch_centers, starts, create_wall(0))
