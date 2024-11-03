@@ -37,9 +37,15 @@ STEP_SIZE = 25
 P = 0.1
 MAX_ITERATIONS_OUR = 2000
 ROBOT_START_MIN_DISTANCE = 20
+Z = 0.044
+DIRT_MIN_LOC = 30
+DIRT_MAX_LOC = 483
+ROBOT_START_MIN_LOC = 50
+ROBOT_START_MAX_LOC = 463
+START_RADIUS = 10
 
 
-
+ROBOT_NAMES = ['IROBOT_CREATE','IROBOT_CREATE_2']
 BUMPERS_NAME = ["bumper_left", "bumper_right"]
 CLIFF_SENSORS_NAME = ["cliff_left", "cliff_front_left", "cliff_front_right", "cliff_right"]
 LEDS_NAME = ["led_on", "led_play", "led_step"]
@@ -53,5 +59,9 @@ RIGHT_WHEEL_SENSOR = "right wheel sensor"
 LED_ON = "led_on"
 LED_PLAY = "led_play"
 LED_STEP = "led_step"
+DISPLAY = "ground_display"
+TRANSLATION = "translation"
+EMITTER = "emitter"
+DUST_IMAGE = "dust_resized_circ_20.png"
 
 

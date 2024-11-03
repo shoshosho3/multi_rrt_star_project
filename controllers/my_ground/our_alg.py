@@ -6,6 +6,7 @@ from tqdm import tqdm
 from typing import List, Tuple
 from consts import *
 import warnings
+from plots import create_plot
 
 
 def SampleUnitNBall(dim=3, num=1):
@@ -308,7 +309,7 @@ class NewRRTSolver:
         sampled_point = self.sample_point(expended_tree, target_tree)
         nearest_node = expended_tree.find_nearest(sampled_point)
         new_coords = self.steer(nearest_node.coordinates, sampled_point)
-        if not self.is_coords_valid(new_coords):
+        if not self.is_coords_valid(new_coords, self.obstacles):
             return
         new_node = Node(expended_tree, new_coords)
         neighbors = expended_tree.get_neighbors(new_coords, self.steer_step_size * 2)
@@ -521,47 +522,6 @@ class NewRRTSolver:
             plt.plot([x1, x2], [y1, y2], 'black')
 
 
-def create_obstacle_matrix():
-    obstacle_matrix = np.zeros((FLOOR_LENGTH, FLOOR_LENGTH))
-    for x_position in range(WALL_X_LEFT - AVOID_DISTANCE, WALL_X_RIGHT + AVOID_DISTANCE):
-        for y_position in (list(range(0, WALL_Y_UP + AVOID_DISTANCE)) +
-                           list(range(WALL_Y_DOWN - AVOID_DISTANCE, FLOOR_LENGTH))):
-            obstacle_matrix[x_position][y_position] = HAS_OBSTACLE
-    return obstacle_matrix
-
-
-def plot(i, start, path=None):
-    if i ==0:
-        plt.plot(start[0], start[1], 'go', markersize=10, label='Start')
-    else:
-        plt.plot(start[0], start[1], 'go', markersize=10)
-
-    # Plot path if available
-    if path:
-        path = np.array(path)
-        if i == 0:
-            plt.plot(path[:, 0], path[:, 1], 'b-', linewidth=LINE_WIDTH, label='Path')
-        else:
-            plt.plot(path[:, 0], path[:, 1], 'b-', linewidth=LINE_WIDTH)
-
-
-# def tsp(dirt_locations, start):
-#     """Solve TSP for optimal dirt patch visiting order."""
-#     locations = [start] + dirt_locations
-#     n = len(locations)
-#     best_order = None
-#     best_cost = float('inf')
-#
-#     for perm in permutations(range(1, n)):
-#         order = [0] + list(perm)
-#         cost = sum(math.dist(locations[order[i]], locations[order[i + 1]]) for i in range(n - 1))
-#         if cost < best_cost:
-#             best_cost = cost
-#             best_order = order
-#
-#     return [locations[i] for i in best_order]
-
-
 def tsp_multi_agent(dirt_locations, start_points, solver):
     """Solve multi-agent TSP for optimal dirt patch visiting order, with different start points for each agent."""
     num_agents = len(start_points)
@@ -608,26 +568,16 @@ def tsp_multi_agent(dirt_locations, start_points, solver):
             for i, path in enumerate(best_assignment)]
 
 
-def run(dirt_locations: List[Tuple[int, int]], starts: List[tuple], obstacles: np.array):
-    warnings.filterwarnings("ignore")
-    # Initialize floor and dirt locations
-    to_avoid = create_obstacle_matrix()
-    goal_sources = np.array(dirt_locations)
-    bounds = np.array([[0, 0], [FLOOR_LENGTH, FLOOR_LENGTH]])
+def full_round(x):
+    x = round(x)
+    if x < 0:
+        x = 0
+    if x >= FLOOR_LENGTH:
+        x = FLOOR_LENGTH - 1
+    return x
 
-    def full_round(x):
-        x = round(x)
-        if x < 0:
-            x = 0
-        if x >= FLOOR_LENGTH:
-            x = FLOOR_LENGTH - 1
-        return x
 
-    is_coords_valid = lambda coords: (0 <= coords[0] < FLOOR_LENGTH and 0 <= coords[1] < FLOOR_LENGTH
-                                      and not to_avoid[full_round(coords[0])][full_round(coords[1])])
-
-    solver = NewRRTSolver(np.array(starts), goal_sources, bounds, P, STEP_SIZE, is_coords_valid, to_avoid)
-
+def run_solver(dirt_locations: List[Tuple[int, int]], starts: List[tuple], solver: NewRRTSolver):
     for _ in tqdm(range(MAX_ITERATIONS_OUR)):
         solver.random_expend_tree()
 
@@ -639,51 +589,52 @@ def run(dirt_locations: List[Tuple[int, int]], starts: List[tuple], obstacles: n
             connection_keys = list(solver.tree_connections.keys())
             flattened = [item for sublist in connection_keys for item in sublist]
 
-    bot_ways = tsp_multi_agent(dirt_locations, starts, solver)
 
+def is_coords_valid(coords, to_avoid):
+    return (0 <= coords[0] < FLOOR_LENGTH and 0 <= coords[1] < FLOOR_LENGTH
+            and not to_avoid[full_round(coords[0])][full_round(coords[1])])
+
+
+def add_nodes(path, node):
+    while node is not None:
+        path.append(tuple(node.coordinates))
+        node = node.parent
+
+
+def get_paths(bot_ways, dirt_locations, starts, solver):
     paths = []
     for ways in bot_ways:
         total_path = []
         for i in range(len(ways) - 1):
             connection = solver.tree_connections[tuple(sorted([ways[i], ways[i + 1]]))]
             path = []
-            node1 = connection.node1
-            while node1 is not None:
-                path.append(tuple(node1.coordinates))
-                node1 = node1.parent
+            add_nodes(path, connection.node1)
             path.reverse()
-            node2 = connection.node2
-            while node2 is not None:
-                path.append(tuple(node2.coordinates))
-                node2 = node2.parent
+            add_nodes(path, connection.node2)
             if dirt_locations[ways[i + 1] - len(starts)] != path[-1]:
                 path.reverse()
             total_path.extend(path[1:])
         paths.append(total_path)
+    return paths
 
-    plt.figure(figsize=(FIG_SIZE, FIG_SIZE))
-    plt.xlim(0, FLOOR_LENGTH)
-    plt.ylim(FLOOR_LENGTH, 0)
-    plt.gca().set_aspect('equal', adjustable='box')
 
-    # Plot obstacles (wall with opening)
-    for i in range(FLOOR_LENGTH):
-        for j in range(FLOOR_LENGTH):
-            if obstacles[i][j] == HAS_OBSTACLE:
-                plt.plot(i, j, 'ks', markersize=WALL_WIDTH)
+def run(dirt_locations: List[Tuple[int, int]], starts: List[tuple], create_obstacle_matrix: callable):
+    warnings.filterwarnings("ignore")
 
-    # Plot dirt locations
-    for i, dirt in enumerate(dirt_locations):
-        if i == 0:
-            plt.plot(dirt[0], dirt[1], 'ro', markersize=DUST_RADIUS, label='Dirt')
-        else:
-            plt.plot(dirt[0], dirt[1], 'ro', markersize=DUST_RADIUS)
+    # Initialize floor and dirt locations
+    to_avoid = create_obstacle_matrix(AVOID_DISTANCE)
+    obstacles = create_obstacle_matrix(0)
+    goal_sources = np.array(dirt_locations)
+    bounds = np.array([[0, 0], [FLOOR_LENGTH, FLOOR_LENGTH]])
 
-    # Plot the results
-    for i in range(len(paths)):
-        paths[i] = [starts[i]] + paths[i]
-        print(f'Final path for {i + 1}th agent: {paths[i]}')
-        plot(i, starts[i], path=paths[i])
-    plt.legend()
-    plt.show()
+    solver = NewRRTSolver(np.array(starts), goal_sources, bounds, P, STEP_SIZE, is_coords_valid, to_avoid)
+
+    run_solver(dirt_locations, starts, solver)
+
+    bot_ways = tsp_multi_agent(dirt_locations, starts, solver)
+
+    paths = get_paths(bot_ways, dirt_locations, starts, solver)
+
+    create_plot(obstacles, dirt_locations, starts, paths)
+
     return paths

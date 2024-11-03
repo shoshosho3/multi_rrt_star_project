@@ -73,6 +73,7 @@ Wall {
   translation -1.65 2.675 0
   name "wall(5)"
   size 0.3 4.3 2.4
+
 }
 Wall {
   translation -1.65 -2.69 0
