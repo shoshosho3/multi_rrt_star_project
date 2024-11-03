@@ -542,7 +542,7 @@ def tsp_multi_agent(dirt_locations, start_points, solver):
         # Distance from the start to the first location in the path
         cost = tot_dist(start, locations[path[0]])
         # Distance for traveling between locations in the path
-        cost += sum(math.dist(locations[path[i]], locations[path[i + 1]]) for i in range(len(path) - 1))
+        cost += sum(tot_dist(locations[path[i]], locations[path[i + 1]]) for i in range(len(path) - 1))
         return cost
 
     # Initialize best cost and assignment
@@ -562,6 +562,7 @@ def tsp_multi_agent(dirt_locations, start_points, solver):
         if max_cost < best_cost:
             best_cost = max_cost
             best_assignment = subpaths
+
 
     # Convert index paths to actual location coordinates
     return [[index_dict[start_points[i]]] + [index_dict[locations[j]] for j in path]
@@ -601,19 +602,24 @@ def add_nodes(path, node):
         node = node.parent
 
 
+def get_total_path(ways, dirt_locations, starts, solver):
+    total_path = []
+    for i in range(len(ways) - 1):
+        connection = solver.tree_connections[tuple(sorted([ways[i], ways[i + 1]]))]
+        path = []
+        add_nodes(path, connection.node1)
+        path.reverse()
+        add_nodes(path, connection.node2)
+        if dirt_locations[ways[i + 1] - len(starts)] != path[-1]:
+            path.reverse()
+        total_path.extend(path[1:])
+    return total_path
+
+
 def get_paths(bot_ways, dirt_locations, starts, solver):
     paths = []
     for ways in bot_ways:
-        total_path = []
-        for i in range(len(ways) - 1):
-            connection = solver.tree_connections[tuple(sorted([ways[i], ways[i + 1]]))]
-            path = []
-            add_nodes(path, connection.node1)
-            path.reverse()
-            add_nodes(path, connection.node2)
-            if dirt_locations[ways[i + 1] - len(starts)] != path[-1]:
-                path.reverse()
-            total_path.extend(path[1:])
+        total_path = get_total_path(ways, dirt_locations, starts, solver)
         paths.append(total_path)
     return paths
 
