@@ -1,12 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import math
 from itertools import permutations
 from tqdm import tqdm
 from typing import List, Tuple
 from consts import *
 import warnings
 from plots import create_plot
+from wall_utils import Wall
 
 
 def SampleUnitNBall(dim=3, num=1):
@@ -627,12 +627,12 @@ def get_paths(bot_ways, dirt_locations, starts, solver):
     return paths
 
 
-def run(dirt_locations: List[Tuple[int, int]], starts: List[tuple], create_obstacle_matrix: callable, walls):
+def run(dirt_locations: List[Tuple[int, int]], starts: List[tuple], walls: Wall):
     warnings.filterwarnings("ignore")
 
     # Initialize floor and dirt locations
-    to_avoid = create_obstacle_matrix(walls, AVOID_DISTANCE)
-    obstacles = create_obstacle_matrix(walls, 0)
+    to_avoid = walls.get_obstacle_matrix(AVOID_DISTANCE)
+    obstacles = walls.get_obstacle_matrix(0)
     goal_sources = np.array(dirt_locations)
     bounds = np.array([[0, 0], [FLOOR_LENGTH, FLOOR_LENGTH]])
 
