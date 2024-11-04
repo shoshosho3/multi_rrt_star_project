@@ -46,6 +46,7 @@ START_RADIUS = 10
 
 
 ROBOT_NAMES = ['IROBOT_CREATE','IROBOT_CREATE_2']
+WALL_NAMES = ['wall_1', 'wall_2', 'wall_3', 'wall_4']
 BUMPERS_NAME = ["bumper_left", "bumper_right"]
 CLIFF_SENSORS_NAME = ["cliff_left", "cliff_front_left", "cliff_front_right", "cliff_right"]
 LEDS_NAME = ["led_on", "led_play", "led_step"]

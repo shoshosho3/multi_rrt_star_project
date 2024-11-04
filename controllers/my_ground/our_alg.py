@@ -563,6 +563,9 @@ def tsp_multi_agent(dirt_locations, start_points, solver):
             best_cost = max_cost
             best_assignment = subpaths
 
+    if best_assignment is None:
+        print('no ways')
+        return None
 
     # Convert index paths to actual location coordinates
     return [[index_dict[start_points[i]]] + [index_dict[locations[j]] for j in path]
@@ -624,12 +627,12 @@ def get_paths(bot_ways, dirt_locations, starts, solver):
     return paths
 
 
-def run(dirt_locations: List[Tuple[int, int]], starts: List[tuple], create_obstacle_matrix: callable):
+def run(dirt_locations: List[Tuple[int, int]], starts: List[tuple], create_obstacle_matrix: callable, walls):
     warnings.filterwarnings("ignore")
 
     # Initialize floor and dirt locations
-    to_avoid = create_obstacle_matrix(AVOID_DISTANCE)
-    obstacles = create_obstacle_matrix(0)
+    to_avoid = create_obstacle_matrix(walls, AVOID_DISTANCE)
+    obstacles = create_obstacle_matrix(walls, 0)
     goal_sources = np.array(dirt_locations)
     bounds = np.array([[0, 0], [FLOOR_LENGTH, FLOOR_LENGTH]])
 
