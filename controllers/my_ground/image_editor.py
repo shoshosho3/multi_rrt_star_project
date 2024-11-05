@@ -1,6 +1,6 @@
 from PIL import Image, ImageDraw
 
-img = Image.open("/Users/Asus/Documents/create/controllers/my_ground/dust.jpg").convert("RGBA")
+img = Image.open("/Users/Asus/Documents/create copy/controllers/my_ground/yellow.jpg").convert("RGBA")
 
 # Generate 4 levels of opacity
 # opacity_levels = [i for i in range(256)]  # (0 = transparent, 255 = opaque)
@@ -25,4 +25,4 @@ circular_image = Image.new("RGBA", img.size, (0, 0, 0, 0))
 circular_image.paste(img.convert("RGBA"), (0, 0), mask)
 
 # Save the circular image
-circular_image.save("/Users/Asus/Documents/create copy/controllers/my_ground/dust_resized_circ_20.png")
+circular_image.save("/Users/Asus/Documents/create copy/controllers/my_ground/yellow_resized_circ_20.png")

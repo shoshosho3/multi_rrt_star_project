@@ -208,5 +208,5 @@ def run(dirt_locations: List[Tuple[int, int]], start: tuple, obstacles: np.array
     # Plot the results
 
     print(f'Final path: {total_path}')
-    plot(dirt_locations, obstacles, path=total_path)  # Plot with the final path
+    # plot(dirt_locations, obstacles, path=total_path)  # Plot with the final path
     return total_path

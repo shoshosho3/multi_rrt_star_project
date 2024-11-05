@@ -5,29 +5,55 @@ import unit_transformations as ut
 import numpy as np
 
 
-def get_walls(robot):
+def get_walls_and_rechargers(robot, battery_mode):
     """
     Get all walls in the simulation.
     :param robot: supervisor
+    :param battery_mode: True if we are using the battery mode, False otherwise
     :return: wall objects
     """
     wall_number = 1
+    recharger_number = 1
     walls = []
+    rechargers = []
+
+    # get all walls
     while robot.getFromDef(f'wall_{wall_number}') is not None:
         walls.append(robot.getFromDef(f'wall_{wall_number}'))
         wall_number += 1
-    return walls
+
+    # handle rechargers
+    while robot.getFromDef(f'recharger_{recharger_number}') is not None:
+        if battery_mode:
+            # add rechargers if we are using the battery mode
+            rechargers.append(robot.getFromDef(f'recharger_{recharger_number}'))
+            recharger_number += 1
+        else:
+            # remove rechargers if we are not using the battery mode
+            robot.getFromDef(f'recharger_{recharger_number}').remove()
+            recharger_number += 1
+
+    return walls, rechargers
 
 
-def get_wall_random_position_and_size():
+def get_wall_random_position_and_size(is_recharger=False):
     """
     Generate a random position and size for a wall.
+    :param is_recharger: True if the wall is a recharger, False otherwise
     :return: random position and size for a wall
     """
+
+    # generate random coordinates and sizes
     x = random.random() * GPS_LENGTH - FLOOR_ADD
     y = random.random() * GPS_LENGTH - FLOOR_ADD
     x_size = random.random() * MAX_WALL_SIZE + MIN_WALL_SIZE
     y_size = random.random() * MAX_WALL_SIZE + MIN_WALL_SIZE
+
+    # rechargers have a fixed size
+    if is_recharger:
+        x_size = CHARGER_SIZE
+        y_size = CHARGER_SIZE
+
     return x, y, x_size, y_size
 
 
@@ -113,11 +139,33 @@ def wall_gps_to_floor(walls):
 
 
 class Wall:
-    def __init__(self, robot):
+    """
+    Class for handling walls in the simulation.
+    """
+    def __init__(self, robot, battery_mode):
+        """
+        Initialize the wall object.
+        :param robot: supervisor
+        :param battery_mode: True if we are using the battery mode, False otherwise
+        """
+
         self.robot = robot
+
+        # get all walls and rechargers if we are not using an empty world
         if robot is not None:
-            self.wall_objects = get_walls(robot)
+            self.wall_objects, self.rechargers = get_walls_and_rechargers(robot, battery_mode)
+            self.all = self.wall_objects + self.rechargers
             self.positions = self.get_positions()
+
+    def get_recharger_positions(self):
+        """
+        Get the positions of all rechargers in floor coordinates.
+        :return: the positions of all rechargers in floor coordinates
+        """
+        locs = []
+        for recharger in self.rechargers:
+            locs.append(recharger.getField(TRANSLATION).getSFVec3f()[0:2])
+        return locs
 
     def get_positions(self):
         """
@@ -125,7 +173,7 @@ class Wall:
         :return: positions of all walls in floor coordinates
         """
         prev_walls = []
-        for wall in self.wall_objects:
+        for wall in self.all:
             x, y, _ = wall.getField(TRANSLATION).getSFVec3f()
             x_size, y_size, _ = wall.getField(SIZE).getSFVec3f()
             prev_walls.append(get_wall_corners(x, y, x_size, y_size))
@@ -136,6 +184,8 @@ class Wall:
         Set positions for all walls randomly
         """
         prev_walls = []
+
+        # set random positions for all walls
         for wall in self.wall_objects:
             x, y, x_size, y_size = get_wall_random_position_and_size()
             while min_dist_to_wall(get_wall_corners(x, y, x_size, y_size), prev_walls) < MIN_WALL_DISTANCE:
@@ -144,6 +194,16 @@ class Wall:
             wall.getField(TRANSLATION).setSFVec3f([x, y, Z])
             wall.getField(SIZE).setSFVec3f([x_size, y_size, WALL_Z])
             wall.getField(ROTATION).setSFRotation([0, 0, 1, 0])
+
+        # set random positions for all rechargers
+        for recharger in self.rechargers:
+            x, y, x_size, y_size = get_wall_random_position_and_size()
+            while min_dist_to_wall(get_wall_corners(x, y, x_size, y_size), prev_walls) < MIN_WALL_DISTANCE:
+                x, y, x_size, y_size = get_wall_random_position_and_size(True)
+            prev_walls.append(get_wall_corners(x, y, x_size, y_size))
+            recharger.getField(TRANSLATION).setSFVec3f([x, y, Z])
+            recharger.getField(ROTATION).setSFRotation([0, 0, 1, 0])
+
         self.positions = wall_gps_to_floor(prev_walls)
 
     def get_obstacle_matrix(self, delta):

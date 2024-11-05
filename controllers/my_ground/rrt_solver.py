@@ -1,11 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from itertools import product, combinations, permutations
 from consts import *
 from tree_classes import Node, is_tree_pair_valid, coords_dist, init_trees, Connection
 from sampling_classes import InformedSampler
 from segment import SegmentDistance
-from collections import defaultdict
 
 
 def organize_possible_connections(new_node, neighbors, check_collision, between_trees=False):
@@ -338,14 +336,42 @@ class NewRRTSolver:
             up_bounds.append(up_bound)
         return concat_paths_, low_bounds, up_bounds
 
-    def extract_alloaction_paths(self, grouped_by_robot, robots_paths):
+    def get_static_c_best(self):
+        """
+        Make a static version of c_best
+        """
+        static_c_best = {}
+        for tree1 in self.trees:
+            for tree2 in self.trees:
+                if not is_tree_pair_valid(tree1, tree2):
+                    continue
+                c_best = self.get_c_best(tree1, tree2)
+                static_c_best[(tree1.tree_id, tree2.tree_id)] = c_best
+                static_c_best[(tree2.tree_id, tree1.tree_id)] = c_best
+        return static_c_best
+
+    def random_allocate_goals(self, num_tries):
+        """
+        Randomly sample num_tries goal allocations and return the best one.
+        """
+        best_allocation, best_cost = None, float('inf')
+        static_c_best = self.get_static_c_best()
+        for _ in range(num_tries):
+            allocation, allocation_cost = self.sample_allocation(static_c_best)
+            if allocation_cost < best_cost and not self.is_collision_allocation(allocation):
+                best_allocation, best_cost = allocation, allocation_cost
+        return best_allocation, best_cost
+
+    def extract_alloaction_paths(self, robots_allocation):
+        """
+        For every robot, parse the allocation to a path of sub-paths.
+        """
         allocation_paths = []
         for idx in range(len(self.robot_trees)):
-            allocation = grouped_by_robot[idx]
+            allocation = robots_allocation[idx]
             if len(allocation) == 0:
                 allocation_paths.append([])
                 continue
-            goals_path = robots_paths[idx][1][tuple(allocation)]
             start_tree = self.robot_trees[idx]
             end_tree = self.goal_trees[allocation[0]]
             allocation_path = [self.extract_connection_path(start_tree, end_tree)]
@@ -356,9 +382,12 @@ class NewRRTSolver:
             allocation_paths.append(allocation_path)
         return allocation_paths
 
-    def is_collision_allocation(self, grouped_by_robot, robots_paths):
+    def is_collision_allocation(self, allocation):
+        """
+        Check if the given allocation is colliding with itself.
+        """
         # extract paths
-        allocation_paths = self.extract_alloaction_paths(grouped_by_robot, robots_paths)
+        allocation_paths = self.extract_alloaction_paths(allocation)
         concat_paths_, low_bounds, up_bounds = self.concat_paths(allocation_paths)
         for idx1 in range(len(self.robot_trees)):
             for idx2 in range(idx1 + 1, len(self.robot_trees)):
@@ -367,81 +396,36 @@ class NewRRTSolver:
                     return True
         return False
 
-    def allocate_goals(self):
-        robots_paths = self.calc_robots_paths()
-        all_assignments = self.calc_all_assignments(robots_paths)
-        for i, assignment in enumerate(all_assignments):
-            grouped_by_robot, assignment_cost = assignment
-            if not self.is_collision_allocation(grouped_by_robot, robots_paths):
-                return grouped_by_robot, robots_paths
-        return None
-
-    def calc_all_assignments(self, robots_paths):
-        robot_idxs = list(range(len(self.robot_trees)))
-        goals_idxs = list(range(len(self.goal_trees)))
-        all_assignments = []
-        for assignment in product(robot_idxs, repeat=len(goals_idxs)):
-            assignment_cost = 0
-            # Pair each goal with a robot
-            paired_assignment = list(zip(goals_idxs, assignment))
-
-            # Group the assignments by robot ID
-            grouped_by_robot = defaultdict(list)
-            for goal_idx, robot_idx in paired_assignment:
-                grouped_by_robot[robot_idx].append(goal_idx)
-
-            # Ensure all robots are represented, even if they have no goals
-            for robot_idx in robot_idxs:
-                grouped_by_robot[robot_idx]  # Accessing to ensure the key exists
-            grouped_by_robot = dict(grouped_by_robot)
-
-            for robot_idx in robot_idxs:
-                robot_assignment = grouped_by_robot[robot_idx]
-                robot_cost = robots_paths[robot_idx][0][tuple(robot_assignment)]
-                assignment_cost = max(assignment_cost, robot_cost)
-
-            # Convert the defaultdict to a regular dict and store it
-            all_assignments.append((grouped_by_robot, assignment_cost))
-        all_assignments.sort(key=lambda x: x[1])
-        return all_assignments
-
-    def calc_robots_paths(self):
-        all_paths_costs = []
-        for robot_idx in range(len(self.robot_trees)):
-            robot_costs, robot_paths = self.calc_robot_paths(robot_idx)
-            all_paths_costs.append((robot_costs, robot_paths))
-        return all_paths_costs
-
-    def calc_robot_paths(self, robot_idx):
-        goals_idxs = list(range(len(self.goal_trees)))
-        robot_tree = self.robot_trees[robot_idx]
-        costs = {(): 0}
-        paths = {(): []}
-
-        for i in range(1, len(self.goal_trees) + 1):
-            for combination in combinations(goals_idxs, i):
-                cost, path = self.calc_robot_path(robot_idx, combination)
-                costs[combination] = cost
-                paths[combination] = path
-
-        return costs, paths
-
-    def calc_robot_path(self, robot_idx, goal_idxs):
-        best_cost = float('inf')
-        best_path = None
-        robot_tree = self.robot_trees[robot_idx]
-        for permutation in permutations(goal_idxs):
-            cost = self.permutation_cost(robot_idx, permutation)
-            if cost < best_cost:
-                best_cost = cost
-                best_path = permutation
-        return best_cost, best_path
-
-    def permutation_cost(self, robot_idx, goal_idxs):
-        cost = self.get_c_best(self.robot_trees[robot_idx], self.goal_trees[goal_idxs[0]])
-        for i in range(1, len(goal_idxs)):
-            cost += self.get_c_best(self.goal_trees[goal_idxs[i - 1]], self.goal_trees[goal_idxs[i]])
-        return cost
+    def sample_allocation(self, static_c_best):
+        """
+        Greedily sample an allocation of goals to robots with order of goals.
+        Returns the allocation and its cost.
+        """
+        allocation = [[] for i in range(len(self.robot_trees))]
+        allocation_costs = np.zeros(len(allocation))
+        goal_probs = np.ones(len(self.goal_trees))
+        goal_idxes = np.array(range(len(self.goal_trees)))
+        robot_idxes = np.array(range(len(self.robot_trees)))
+        for i in range(len(self.goal_trees)):
+            # sample goal
+            sampled_goal_idx = np.random.choice(goal_idxes, p=goal_probs / np.sum(goal_probs))
+            sampled_goal_id = self.goal_trees[sampled_goal_idx].tree_id
+            goal_probs[sampled_goal_idx] = 0
+            # calc cost of choosing every robot
+            robot_dists = np.zeros(len(self.robot_trees))
+            for robot_idx in robot_idxes:
+                if len(allocation[robot_idx]) == 0:
+                    sampled_robot_id = self.robot_trees[robot_idx].tree_id
+                else:
+                    sampled_robot_id = self.goal_trees[allocation[robot_idx][-1]].tree_id
+                robot_dists[robot_idx] = static_c_best[(sampled_robot_id, sampled_goal_id)]
+            # sample robot
+            sampled_robot = np.random.choice(robot_idxes,
+                                             p=(allocation_costs + robot_dists) / np.sum(
+                                                 allocation_costs + robot_dists))
+            allocation_costs[sampled_robot] += robot_dists[sampled_robot]
+            allocation[sampled_robot].append(sampled_goal_idx)
+        return allocation, np.max(allocation_costs)
 
     def plot_all_trees(self):
         """

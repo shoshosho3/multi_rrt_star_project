@@ -9,7 +9,10 @@ from rrt_solver import NewRRTSolver
 
 
 def full_round(x):
-    """this is just the round function with an out of bounds check"""
+    """
+    this is just the round function with an out of bounds check
+    """
+
     x = round(x)
     if x < 0:
         x = 0
@@ -44,7 +47,7 @@ def run_solver(solver: NewRRTSolver):
         return None, None
 
     # allocate the goals
-    goals = solver.allocate_goals()
+    goals = solver.random_allocate_goals(10000)
 
     # check if there is no allocation, if so return None
     if goals is None:
@@ -52,35 +55,65 @@ def run_solver(solver: NewRRTSolver):
         return None, None
 
     # return the allocation and the paths
-    return solver.allocate_goals()
+    return solver.random_allocate_goals(10000)
 
 
 def is_coords_valid(coords, to_avoid):
+    """
+    check if the coordinates are valid
+    :param coords: coordinates to check
+    :param to_avoid: matrix of obstacles
+    :return: true if the coordinates are valid, otherwise false
+    """
     return (0 <= coords[0] < FLOOR_LENGTH and 0 <= coords[1] < FLOOR_LENGTH
             and not to_avoid[full_round(coords[0])][full_round(coords[1])])
 
 
 def add_nodes(path, node):
+    """
+    add the nodes to the path
+    :param path: path to add the nodes to
+    :param node: node to add
+    """
     while node is not None:
         path.append(tuple(node.coordinates))
         node = node.parent
 
 
 def get_total_path(ways, dirt_locations, starts, solver):
+    """
+    get the total path for the bots
+    :param ways: ways to get the path
+    :param dirt_locations: dirt locations
+    :param starts: start locations
+    :param solver: solver object
+    :return: the total path for the bots
+    """
+
+    # initialize the total path
     total_path = []
+
     for i in range(len(ways) - 1):
+
+        # get the connection between the two ways
         connection = solver.tree_connections[tuple(sorted([ways[i], ways[i + 1]]))]
+
+        # get the path
         path = []
         add_nodes(path, connection.node1)
         path.reverse()
         add_nodes(path, connection.node2)
+
+        # check if the path is reversed
         if dirt_locations[ways[i + 1] - len(starts)] != path[-1]:
             path.reverse()
-        # print(path)
+
+        # add the path to the total path
         if i == 0:
             total_path.extend(path)
         else:
             total_path.extend(path[1:])
+
     return total_path
 
 
@@ -123,10 +156,10 @@ def run(dirt_locations: List[Tuple[int, int]], starts: List[tuple], walls: Wall)
                           COLLISION_DISTANCE)
 
     # getting the tree paths
-    al, paths = run_solver(solver)
+    al, _ = run_solver(solver)
     if al is None:  # no legal allocation found
         return [[] for _ in range(len(starts))]
-    final_tree_paths = [[key] + [p + len(al) for p in paths[key][1][tuple(value)]] for key, value in al.items()]
+    final_tree_paths = [[key] + [p + len(al) for p in value] for key, value in enumerate(al)]
     print(f'final paths by tree ids: {final_tree_paths}')
 
     # getting the paths
