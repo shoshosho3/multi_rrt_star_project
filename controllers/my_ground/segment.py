@@ -2,6 +2,7 @@ import numpy as np
 from dataclasses import dataclass
 from typing import List, Tuple
 
+
 @dataclass
 class Result:
     """Result structure for distance computation."""
@@ -15,6 +16,7 @@ class Result:
             self.parameter = [0.0, 0.0]
         if self.closest is None:
             self.closest = [np.zeros(3), np.zeros(3)]
+
 
 class SegmentDistance:
     """Compute the closest points for two segments in N dimensions."""
@@ -37,7 +39,7 @@ class SegmentDistance:
 
     @staticmethod
     def compute_intersection(s_value: List[float], classify: List[int], b: float,
-                           f00: float, f10: float) -> Tuple[List[int], List[List[float]]]:
+                             f00: float, f10: float) -> Tuple[List[int], List[List[float]]]:
         """
         Compute intersection of the line dR/ds = 0 with domain [0,1]^2.
         """
@@ -104,8 +106,8 @@ class SegmentDistance:
 
     @staticmethod
     def compute_minimum_parameters(edge: List[int], end: List[List[float]],
-                                 b: float, c: float, e: float, g00: float,
-                                 g10: float, g01: float, g11: float) -> List[float]:
+                                   b: float, c: float, e: float, g00: float,
+                                   g10: float, g01: float, g11: float) -> List[float]:
         """
         Compute minimum parameters for the intersection segment.
         """
