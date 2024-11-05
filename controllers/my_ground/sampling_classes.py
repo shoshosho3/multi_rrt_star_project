@@ -1,5 +1,4 @@
 import numpy as np
-from consts import *
 
 
 def SampleUnitNBall(dim=3, num=1):
