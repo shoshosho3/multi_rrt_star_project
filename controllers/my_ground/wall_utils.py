@@ -1,4 +1,3 @@
-from controller import Supervisor
 import random
 from consts import *
 import math
@@ -7,16 +6,24 @@ import numpy as np
 
 
 def get_walls(robot):
-    i = 1
+    """
+    Get all walls in the simulation.
+    :param robot: supervisor
+    :return: wall objects
+    """
+    wall_number = 1
     walls = []
-    while robot.getFromDef(f'wall_{i}') is not None:
-        walls.append(robot.getFromDef(f'wall_{i}'))
-        i += 1
+    while robot.getFromDef(f'wall_{wall_number}') is not None:
+        walls.append(robot.getFromDef(f'wall_{wall_number}'))
+        wall_number += 1
     return walls
 
 
 def get_wall_random_position_and_size():
-    """Generate a random position and size for a wall."""
+    """
+    Generate a random position and size for a wall.
+    :return: random position and size for a wall
+    """
     x = random.random() * GPS_LENGTH - FLOOR_ADD
     y = random.random() * GPS_LENGTH - FLOOR_ADD
     x_size = random.random() * MAX_WALL_SIZE + MIN_WALL_SIZE
@@ -25,6 +32,14 @@ def get_wall_random_position_and_size():
 
 
 def rect_distance(wall1, wall2):
+    """
+    Calculate the distance between two walls.
+    :param wall1: wall 1
+    :param wall2: wall 2
+    :return: distance between the two walls
+    """
+
+    # unpack the walls into coordinates of the corners
     x1, y1, x1b, y1b = wall1
     x2, y2, x2b, y2b = wall2
 
@@ -56,8 +71,13 @@ def rect_distance(wall1, wall2):
         return 0
 
 
-def dist_walls(wall1, prev_walls):
-    """Calculate distance between a point and all walls."""
+def min_dist_to_wall(wall1, prev_walls):
+    """
+    Calculate the minimum distance to an existing wall.
+    :param wall1: new wall
+    :param prev_walls: existing walls
+    :return: minimum distance to an existing wall
+    """
     min_dist = float('inf')
     for wall in prev_walls:
         dist = rect_distance(wall1, wall)
@@ -67,12 +87,23 @@ def dist_walls(wall1, prev_walls):
 
 
 def get_wall_corners(x, y, x_size, y_size):
-    """Get the corners of a wall."""
+    """
+    Get the corners of a wall.
+    :param x: middle x coordinate
+    :param y: middle y coordinate
+    :param x_size: x size
+    :param y_size: y size
+    :return: bottom left and top right corners of the wall
+    """
     return x - x_size / 2, y - y_size / 2, x + x_size / 2, y + y_size / 2
 
 
 def wall_gps_to_floor(walls):
-    """Convert GPS coordinates of walls to floor coordinates."""
+    """
+    Convert all wall GPS coordinates to floor coordinates.
+    :param walls: list of walls in GPS coordinates
+    :return: the walls in floor coordinates
+    """
     wall_positions = []
     for wall in walls:
         x1, y1 = ut.gps_to_floor(wall[0:2])
@@ -89,7 +120,10 @@ class Wall:
             self.positions = self.get_positions()
 
     def get_positions(self):
-        """Get positions for all walls."""
+        """
+        Get the positions of all walls in floor coordinates.
+        :return: positions of all walls in floor coordinates
+        """
         prev_walls = []
         for wall in self.wall_objects:
             x, y, _ = wall.getField(TRANSLATION).getSFVec3f()
@@ -98,11 +132,13 @@ class Wall:
         return wall_gps_to_floor(prev_walls)
 
     def set_random_positions(self):
-        """Set positions for all walls."""
+        """
+        Set positions for all walls randomly
+        """
         prev_walls = []
         for wall in self.wall_objects:
             x, y, x_size, y_size = get_wall_random_position_and_size()
-            while dist_walls(get_wall_corners(x, y, x_size, y_size), prev_walls) < MIN_WALL_DISTANCE:
+            while min_dist_to_wall(get_wall_corners(x, y, x_size, y_size), prev_walls) < MIN_WALL_DISTANCE:
                 x, y, x_size, y_size = get_wall_random_position_and_size()
             prev_walls.append(get_wall_corners(x, y, x_size, y_size))
             wall.getField(TRANSLATION).setSFVec3f([x, y, Z])
@@ -111,17 +147,30 @@ class Wall:
         self.positions = wall_gps_to_floor(prev_walls)
 
     def get_obstacle_matrix(self, delta):
-        """Create a wall obstacle in the simulation environment."""
+        """
+        Create a wall obstacle in the simulation environment
+        :param delta: the distance to a physical wall we want to avoid
+        """
+
+        # initialize the matrix with zeros
         obstacles_matrix = np.zeros((FLOOR_LENGTH, FLOOR_LENGTH))
-        if self.robot is None:
-            return obstacles_matrix
+
+        # avoid colliding with side walls
         for i in range(delta):
             for j in range(FLOOR_LENGTH):
                 obstacles_matrix[i][j] = HAS_OBSTACLE
                 obstacles_matrix[j][i] = HAS_OBSTACLE
+
+        # if there are no walls in the simulation, return the matrix
+        if self.robot is None:
+            return obstacles_matrix
+
+        # add the walls to the matrix
         for wall in self.positions:
             for x in range(wall[0] - delta, wall[2] + delta):
                 for y in range(wall[3] - delta, wall[1] + delta):
                     if 0 <= x < FLOOR_LENGTH and 0 <= y < FLOOR_LENGTH:
                         obstacles_matrix[x][y] = HAS_OBSTACLE
+
+        # return the matrix
         return obstacles_matrix

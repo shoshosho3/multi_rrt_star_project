@@ -54,11 +54,9 @@ MIN_SPEED_ALG = 15
 MAX_SPEED_ALG = 25
 MAX_TURN_TIME = 2
 
-
-
 SIZE = 'size'
 ROTATION = 'rotation'
-ROBOT_NAMES = ['IROBOT_CREATE','IROBOT_CREATE_2']
+ROBOT_NAMES = ['IROBOT_CREATE', 'IROBOT_CREATE_2']
 WALL_NAMES = ['wall_1', 'wall_2', 'wall_3', 'wall_4']
 BUMPERS_NAME = ["bumper_left", "bumper_right"]
 CLIFF_SENSORS_NAME = ["cliff_left", "cliff_front_left", "cliff_front_right", "cliff_right"]
@@ -77,5 +75,3 @@ DISPLAY = "ground_display"
 TRANSLATION = "translation"
 EMITTER = "emitter"
 DUST_IMAGE = "dust_resized_circ_20.png"
-
-
