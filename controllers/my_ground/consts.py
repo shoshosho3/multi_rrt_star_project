@@ -56,6 +56,8 @@ MAX_TURN_TIME = 2
 
 SIZE = 'size'
 ROTATION = 'rotation'
+ROBOT = 'robot'
+GOAL = 'goal'
 ROBOT_NAMES = ['IROBOT_CREATE', 'IROBOT_CREATE_2']
 WALL_NAMES = ['wall_1', 'wall_2', 'wall_3', 'wall_4']
 BUMPERS_NAME = ["bumper_left", "bumper_right"]
