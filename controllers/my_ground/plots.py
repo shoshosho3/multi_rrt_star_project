@@ -4,6 +4,7 @@ from consts import *
 
 
 def plot_obstacles(obstacles):
+    """Plot the obstacles on the floor."""
     for i in range(FLOOR_LENGTH):
         for j in range(FLOOR_LENGTH):
             if obstacles[i][j] == HAS_OBSTACLE:
@@ -11,6 +12,7 @@ def plot_obstacles(obstacles):
 
 
 def plot_dirt(dirt_locations):
+    """Plot the dirt patches on the floor."""
     for i, dirt in enumerate(dirt_locations):
         if i == 0:
             plt.plot(dirt[0], dirt[1], 'ro', markersize=DUST_RADIUS, label='Dirt')
@@ -19,6 +21,7 @@ def plot_dirt(dirt_locations):
 
 
 def plot_path(i, start, path=None):
+    """Plot the path of the robot."""
     if i == 0:
         plt.plot(start[0], start[1], 'go', markersize=START_RADIUS, label='Start')
     else:
@@ -34,17 +37,22 @@ def plot_path(i, start, path=None):
 
 
 def plot_paths(paths, starts):
+    """Plot the paths of the robots."""
     for i in range(len(paths)):
-        paths[i] = [starts[i]] + paths[i]
+        # paths[i] = [starts[i]] + paths[i]
         print(f'Final path for {i + 1}th agent: {paths[i]}')
         plot_path(i, starts[i], path=paths[i])
 
 
-def create_plot(obstacles, dirt_locations, starts, paths):
+def create_plot(obstacles, dirt_locations, starts, paths, solver):
+    """Create a plot of the floor with the obstacles, dirt patches, and paths."""
     plt.figure(figsize=(FIG_SIZE, FIG_SIZE))
     plt.xlim(0, FLOOR_LENGTH)
     plt.ylim(FLOOR_LENGTH, 0)
     plt.gca().set_aspect('equal', adjustable='box')
+
+    # solver.plot_all_trees()
+    # solver.plot_connections()
 
     # plotting the different elements
     plot_obstacles(obstacles)

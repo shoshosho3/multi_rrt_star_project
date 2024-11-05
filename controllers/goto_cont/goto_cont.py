@@ -129,8 +129,10 @@ class GotoRobot:
             message = self.receiver.getString()
             paths = ast.literal_eval(message)  # Convert string back to list
             name = self.robot.getName()
-            print(f"Received paths: {name}")
+            print(f"{name} received paths")
             for path in paths:
+                if len(path) == 0:
+                    continue
                 x1, y1 = path[0]
                 x2, y2 = start
                 if abs(x1 - x2) <= 1 and abs(y1 - y2) <= 1:
@@ -161,6 +163,7 @@ if __name__ == "__main__":
     robot.passive_wait(WAIT_TIME)
     obstacles = create_wall()
     path = robot.receive_path(gps_to_floor(robot.get_gps_position()))
+    name = robot.robot.getName()
     additional_time = 0
     while path is None:
         robot.passive_wait(WAIT_TIME + additional_time)

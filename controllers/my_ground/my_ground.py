@@ -18,7 +18,7 @@ def create_dust(display, obstacles):
     return patches
 
 
-def get_paths(robots, patch_centers, walls):
+def get_paths(robots: MyRobot, patch_centers: list, walls: Wall):
     """Generate paths for robots from their positions to dust patches."""
     starts = robots.get_positions()
     return our_alg.run(patch_centers, starts, walls)
@@ -30,7 +30,7 @@ def send_message(msg, emitter):
 
 
 # Main loop for simulation
-def sim_loop(robot, display, robots):
+def sim_loop(robot: Supervisor, display, robots: MyRobot):
     """Main simulation loop to update robot positions and display."""
     while robot.step(TIME_STEP) != TERMINATE_TIME_STEP:
         robots.display_robot_positions(display)
@@ -43,14 +43,17 @@ def main():
     # Setup simulation environment
     robot = Supervisor()
 
+    # Initialize devices and objects
     display = robot.getDevice(DISPLAY)
     emitter = robot.getDevice(EMITTER)
     my_bots = MyRobot(robot)
 
+    # initialize random walls and create obstacle matrix based on them
     walls = Wall(robot)
     walls.set_random_positions()
     obstacles = walls.get_obstacle_matrix(DIRT_DELTA)
 
+    # Set random positions for robots and create dust patches
     my_bots.set_random_positions(obstacles)
     dirt_locs = create_dust(display, obstacles)
     paths = get_paths(my_bots, dirt_locs, walls)
@@ -60,6 +63,12 @@ def main():
     display.setAlpha(TRANSPARENCY)
     sim_loop(robot, display, my_bots)
     robot.cleanup()
+
+    # walls = Wall(None)
+    # my_bots = [(100, 100), (120, 120), (200, 200), (250, 250), (300, 300)]
+    # dirt_locs = [(400, 450), (350, 400), (300, 350), (250, 300), (200, 250), (150, 200), (100, 150), (50, 100), (50, 50),
+    #              (400, 400), (350, 350)]
+    # paths = our_alg.run(dirt_locs, my_bots, walls)
 
 
 # Run the main function

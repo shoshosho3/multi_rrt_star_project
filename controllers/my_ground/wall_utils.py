@@ -82,9 +82,11 @@ def wall_gps_to_floor(walls):
 
 
 class Wall:
-    def __init__(self, robot: Supervisor):
-        self.wall_objects = get_walls(robot)
-        self.positions = self.get_positions()
+    def __init__(self, robot):
+        self.robot = robot
+        if robot is not None:
+            self.wall_objects = get_walls(robot)
+            self.positions = self.get_positions()
 
     def get_positions(self):
         """Get positions for all walls."""
@@ -105,11 +107,18 @@ class Wall:
             prev_walls.append(get_wall_corners(x, y, x_size, y_size))
             wall.getField(TRANSLATION).setSFVec3f([x, y, Z])
             wall.getField(SIZE).setSFVec3f([x_size, y_size, WALL_Z])
+            wall.getField(ROTATION).setSFRotation([0, 0, 1, 0])
         self.positions = wall_gps_to_floor(prev_walls)
 
     def get_obstacle_matrix(self, delta):
         """Create a wall obstacle in the simulation environment."""
         obstacles_matrix = np.zeros((FLOOR_LENGTH, FLOOR_LENGTH))
+        if self.robot is None:
+            return obstacles_matrix
+        for i in range(delta):
+            for j in range(FLOOR_LENGTH):
+                obstacles_matrix[i][j] = HAS_OBSTACLE
+                obstacles_matrix[j][i] = HAS_OBSTACLE
         for wall in self.positions:
             for x in range(wall[0] - delta, wall[2] + delta):
                 for y in range(wall[3] - delta, wall[1] + delta):
