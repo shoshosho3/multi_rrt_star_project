@@ -1,5 +1,4 @@
 import random
-import numpy as np
 from consts import *
 from controller import Robot
 import math
@@ -181,6 +180,7 @@ class GotoRobot:
     def return_to_charge(self, recharge_locations, obstacle_matrix, next_target):
         """
         Returns the robot to the charging station if possible
+        :param next_target: the next target location
         :param recharge_locations: the locations of the charging stations
         :param obstacle_matrix: matrix of obstacles
         """

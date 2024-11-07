@@ -21,5 +21,3 @@ def gps_to_floor(gps):
         int((gps[0] + FLOOR_ADD) / GPS_LENGTH * FLOOR_LENGTH),
         int((FLOOR_ADD - gps[1]) / GPS_LENGTH * FLOOR_LENGTH)
     )
-
-

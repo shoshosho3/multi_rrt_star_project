@@ -10,7 +10,7 @@ from rrt_solver import NewRRTSolver
 
 def full_round(x):
     """
-    this is just the round function with an out of bounds check
+    this is just the round function with an out-of-bounds check
     """
 
     x = round(x)

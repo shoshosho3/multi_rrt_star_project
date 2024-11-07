@@ -162,13 +162,13 @@ def run_rrt_star(start, goal, obstacle_matrix, max_iterations=MAX_ITERATIONS_REG
         radius (float): The radius within which to consider neighbors for rewiring.
 
     Returns:
-        list of tuple or None: The path from start to goal as a list of GPS coordinates if a path is found, otherwise None.
+        list of tuple or None: The path from start to goal as a list of GPS coordinates if a path is found,
+         otherwise None.
     """
     final_path = None
     start = ut.gps_to_floor(start)
     goal = ut.gps_to_floor(goal)
     start_node = Node(start)
-    goal_node = Node(goal)
     tree = [start_node]
     best_cost = float('inf')
 
@@ -217,7 +217,7 @@ def run_rrt_star(start, goal, obstacle_matrix, max_iterations=MAX_ITERATIONS_REG
 
             tree.append(new_node)
 
-            # Check if goal is reached and update best path if found
+            # Check if goal is reached and update the best path if found
             if (euclidean_distance(new_position, goal) < CHARGING_DISTANCE / GPS_LENGTH * FLOOR_LENGTH
                     and new_node.cost < best_cost):
                 best_cost = new_node.cost
