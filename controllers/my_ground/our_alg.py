@@ -50,12 +50,12 @@ def run_solver(solver: NewRRTSolver):
     goals = solver.random_allocate_goals(10000)
 
     # check if there is no allocation, if so return None
-    if goals is None:
+    if goals[0] is None:
         print('no allocation')
         return None, None
 
     # return the allocation and the paths
-    return solver.random_allocate_goals(10000)
+    return goals
 
 
 def is_coords_valid(coords, to_avoid):

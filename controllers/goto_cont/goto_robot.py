@@ -155,7 +155,7 @@ class GotoRobot:
         if (min_dist < cost_left + self.calculate_distance(target) and
                 self.battery_level <= self.min_distance(recharge_locations)[0] * self.consumption_rate * 60):
             print(f"{self.name} warning: Low battery! Returning to charging station.")
-            self.return_to_charge(recharge_locations, obstacle_matrix)
+            self.return_to_charge(recharge_locations, obstacle_matrix, target)
 
         # if the battery is moderately low and the robot is close to a charging station
         elif self.battery_level <= self.critical_battery_level and min_dist < CHARGING_DISTANCE:
@@ -178,7 +178,7 @@ class GotoRobot:
                 min_loc = loc
         return min_dist, min_loc
 
-    def return_to_charge(self, recharge_locations, obstacle_matrix):
+    def return_to_charge(self, recharge_locations, obstacle_matrix, next_target):
         """
         Returns the robot to the charging station if possible
         :param recharge_locations: the locations of the charging stations
@@ -203,8 +203,20 @@ class GotoRobot:
         if self.calculate_distance(min_loc) < CHARGING_DISTANCE:
             self.charge_battery()
 
+        path = run_rrt_star(self.get_gps_position(), next_target, obstacle_matrix)
+
+        # checking if the path is found
+        if path is None:
+            print(f"{self.name} could not find a path back from charging station.")
+            return
+
+        # going to the charging station
+        for loc in path:
+            self.goto(loc, recharge_locations, obstacle_matrix, to_charge=True)
+
     def charge_battery(self):
         print(f"{self.name} charging battery...")
+        self.stop()
         self.passive_wait(CHARGING_TIME / (FULL_BATTERY - self.battery_level))
         self.battery_level = FULL_BATTERY
 

@@ -75,7 +75,7 @@ class NewRRTSolver:
         new_make_children(new_node, possible_connections)
 
         self.try_connect_graphs(expended_tree, new_node)
-        self.random_vertex_contraction(expended_tree, target_tree)
+        self.random_vertex_contraction(new_node)
         self.branch_and_bound(expended_tree)
 
     def random_expend_tree(self):
@@ -126,16 +126,11 @@ class NewRRTSolver:
             return self.sample_task_space(expended_tree, target_tree)
         return self.basic_sample(expended_tree, target_tree)
 
-    def random_vertex_contraction(self, expended_tree, target_tree):
+    def random_vertex_contraction(self, node):
         p = np.random.rand()
         if p > self.p_vertex_contraction:
             return
-        tree_ids = tuple(sorted((expended_tree.tree_id, target_tree.tree_id)))
-        if not tree_ids in self.tree_connections:
-            return
-        connection = self.tree_connections[tree_ids]
-        leaf = connection.node1 if connection.node1.tree == expended_tree else connection.node2
-        path = leaf.path_to_root()
+        path = node.path_to_root()
         if len(path) < 3:
             return
         descendant_idx = np.random.randint(0, len(path) - 2)
@@ -144,8 +139,7 @@ class NewRRTSolver:
         ancestor_node = path[ancestor_idx]
 
         if not self.check_collision(descendant_node.coordinates, ancestor_node.coordinates):
-            cost_diff = ancestor_node.cost + coords_dist(descendant_node.coordinates,
-                                                         ancestor_node.coordinates) - descendant_node.cost
+            cost_diff = ancestor_node.cost + coords_dist(descendant_node.coordinates, ancestor_node.coordinates) - descendant_node.cost
             descendant_node.update_cost(cost_diff)
             old_parent = descendant_node.parent
             if old_parent is not None:
@@ -420,9 +414,10 @@ class NewRRTSolver:
                     sampled_robot_id = self.goal_trees[allocation[robot_idx][-1]].tree_id
                 robot_dists[robot_idx] = static_c_best[(sampled_robot_id, sampled_goal_id)]
             # sample robot
-            sampled_robot = np.random.choice(robot_idxes,
-                                             p=(allocation_costs + robot_dists) / np.sum(
-                                                 allocation_costs + robot_dists))
+            pseudo_prob1 = (allocation_costs + robot_dists) / np.sum(allocation_costs + robot_dists)
+            pseudo_prob2 = 1 - pseudo_prob1
+            pseudo_prob3 = (pseudo_prob2) / np.sum(pseudo_prob2)
+            sampled_robot = np.random.choice(robot_idxes, p=pseudo_prob3)
             allocation_costs[sampled_robot] += robot_dists[sampled_robot]
             allocation[sampled_robot].append(sampled_goal_idx)
         return allocation, np.max(allocation_costs)

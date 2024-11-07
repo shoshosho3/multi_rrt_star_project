@@ -58,7 +58,7 @@ def sim_loop(robot: Supervisor, display, robots: MyRobot):
 # Main function to initialize and start the simulation
 def main():
 
-    random.seed(0)
+    random.seed(42)
 
     print('Starting supervisor...')
 

@@ -202,6 +202,7 @@ class Wall:
                 x, y, x_size, y_size = get_wall_random_position_and_size(True)
             prev_walls.append(get_wall_corners(x, y, x_size, y_size))
             recharger.getField(TRANSLATION).setSFVec3f([x, y, Z])
+            recharger.getField(SIZE).setSFVec3f([CHARGER_SIZE, CHARGER_SIZE, CHARGER_SIZE])
             recharger.getField(ROTATION).setSFRotation([0, 0, 1, 0])
 
         self.positions = wall_gps_to_floor(prev_walls)
