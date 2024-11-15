@@ -51,6 +51,8 @@ def init_trees(robot_sources, goal_sources):
     trees, robot_trees, goal_trees = [], [], []
     add_trees(0, robot_sources, ROBOT, trees, robot_trees)
     add_trees(len(robot_sources), goal_sources, GOAL, trees, goal_trees)
+    for tree in trees:
+        tree.append_valid_trees(trees)
     return trees, robot_trees, goal_trees
 
 
@@ -193,6 +195,7 @@ class Tree:
         self.tree_type = tree_type
         self.tree_id = tree_id
         self.root = Node(self, root_source)
+        self.valid_trees = []
 
     def find_nearest(self, coordinates):
         """
@@ -226,6 +229,11 @@ class Tree:
         :param rrt_solver: rrt solver object
         """
         self.root.branch_and_bound(rrt_solver)
+
+    def append_valid_trees(self, potential_trees):
+        for tree in potential_trees:
+            if is_tree_pair_valid(self, tree):
+                self.valid_trees.append(tree)
 
 
 class Connection:

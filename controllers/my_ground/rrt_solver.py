@@ -79,7 +79,10 @@ class NewRRTSolver:
         self.branch_and_bound(expended_tree)
 
     def random_expend_tree(self):
-        expended_tree, target_tree = self.sample_trees()
+        """
+        Randomly choose a tree to expend and a target tree.
+        """
+        expended_tree, target_tree = self.smart_sample_trees()
         self.expend_tree(expended_tree, target_tree)
 
     def get_trees_connection(self, tree1, tree2):
@@ -185,6 +188,26 @@ class NewRRTSolver:
         while not is_tree_pair_valid(expended_tree, target_tree):
             expended_tree, target_tree = np.random.choice(self.trees, 2)
         return expended_tree, target_tree
+
+    def smart_sample_trees(self):
+        """Sample a tree pair to expand. favor unconnected pairs"""
+        expended_tree = np.random.choice(self.trees)
+        unconnected_trees = self.unconnect_trees(expended_tree)
+        if len(unconnected_trees) == 0:
+            target_tree = np.random.choice(expended_tree.valid_trees)
+            return expended_tree, target_tree
+        target_tree = np.random.choice(unconnected_trees)
+        return expended_tree, target_tree
+
+    def unconnect_trees(self, tree):
+        """
+        Find all valid trees that are not connected to tree.
+        """
+        unconnected = []
+        for valid_tree in tree.valid_trees:
+            if self.get_c_best(tree, valid_tree) == float('inf'):
+                unconnected.append(valid_tree)
+        return unconnected
 
     def is_tree_connected(self, tree):
         for other_tree in self.trees:
@@ -344,7 +367,7 @@ class NewRRTSolver:
                 static_c_best[(tree2.tree_id, tree1.tree_id)] = c_best
         return static_c_best
 
-    def random_allocate_goals(self, num_tries):
+    def random_allocate_goals(self, num_tries, check_collision=True):
         """
         Randomly sample num_tries goal allocations and return the best one.
         """
@@ -352,7 +375,7 @@ class NewRRTSolver:
         static_c_best = self.get_static_c_best()
         for _ in range(num_tries):
             allocation, allocation_cost = self.sample_allocation(static_c_best)
-            if allocation_cost < best_cost and not self.is_collision_allocation(allocation):
+            if allocation_cost < best_cost and (not check_collision or not self.is_collision_allocation(allocation)):
                 best_allocation, best_cost = allocation, allocation_cost
         return best_allocation, best_cost
 
@@ -417,7 +440,10 @@ class NewRRTSolver:
             pseudo_prob1 = (allocation_costs + robot_dists) / np.sum(allocation_costs + robot_dists)
             pseudo_prob2 = 1 - pseudo_prob1
             pseudo_prob3 = (pseudo_prob2) / np.sum(pseudo_prob2)
-            sampled_robot = np.random.choice(robot_idxes, p=pseudo_prob3)
+            if len(robot_idxes) == 1:
+                sampled_robot = 0
+            else:
+                sampled_robot = np.random.choice(robot_idxes, p=pseudo_prob3)
             allocation_costs[sampled_robot] += robot_dists[sampled_robot]
             allocation[sampled_robot].append(sampled_goal_idx)
         return allocation, np.max(allocation_costs)

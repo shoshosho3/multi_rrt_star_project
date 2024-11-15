@@ -6,6 +6,7 @@ import warnings
 from plots import create_plot
 from wall_utils import Wall
 from rrt_solver import NewRRTSolver
+import time
 
 
 def full_round(x):
@@ -31,13 +32,13 @@ def run_solver(solver: NewRRTSolver):
     """
 
     # run the solver for a given number of iterations
-    for _ in tqdm(range(MAX_ITERATIONS_OUR // 5)):
+    for _ in range(MAX_ITERATIONS_OUR // 5):
         solver.random_expend_tree()
 
     # run until the trees are connected or the max iterations are reached
-    for _ in tqdm(range(MAX_ITERATIONS_OUR)):
+    for _ in range(MAX_ITERATIONS_OUR):
         if solver.are_trees_connected():
-            tqdm.write('connected')
+            # tqdm.write('connected')
             break
         solver.random_expend_tree()
 
@@ -47,15 +48,27 @@ def run_solver(solver: NewRRTSolver):
         return None, None
 
     # allocate the goals
-    goals = solver.random_allocate_goals(10000)
+    goals = None, None
+    goals, price = solver.random_allocate_goals(10000)
+    # for i in range(ALLOCATION_TRIES):
+    #     # start_time = time.time()
+    #     goals = solver.random_allocate_goals(10000)
+    #     # print(f'time to allocate goals: {time.time() - start_time}')
+    #     if goals[0] is not None:
+    #         break
+    #     for _ in tqdm(range(MAX_ITERATIONS_OUR // 5)):
+    #         solver.random_expend_tree()
 
     # check if there is no allocation, if so return None
-    if goals[0] is None:
-        print('no allocation')
-        return None, None
+    if goals is None:
+        print('not found collision free allocation')
+        goals, price = solver.random_allocate_goals(10000, False)
+        return FAILURE, goals, price
+        # print('no allocation')
+        # return None, None
 
     # return the allocation and the paths
-    return goals
+    return SUCCESS, goals, price
 
 
 def is_coords_valid(coords, to_avoid):
@@ -156,16 +169,16 @@ def run(dirt_locations: List[Tuple[int, int]], starts: List[tuple], walls: Wall)
                           COLLISION_DISTANCE)
 
     # getting the tree paths
-    al, _ = run_solver(solver)
-    if al is None:  # no legal allocation found
-        return [[] for _ in range(len(starts))]
-    final_tree_paths = [[key] + [p + len(al) for p in value] for key, value in enumerate(al)]
-    print(f'final paths by tree ids: {final_tree_paths}')
+    did_succeed, goals, price = run_solver(solver)
+    # if al is None:  # no legal allocation found
+    #     return [[] for _ in range(len(starts))]
+    final_tree_paths = [[key] + [p + len(goals) for p in value] for key, value in enumerate(goals)]
+    # print(f'final paths by tree ids: {final_tree_paths}')
 
     # getting the paths
     paths = get_paths(final_tree_paths, dirt_locations, starts, solver)
 
     # create plot
-    create_plot(obstacles, dirt_locations, starts, paths, solver)
+    # create_plot(obstacles, dirt_locations, starts, paths, solver)
 
-    return paths
+    return did_succeed, paths, price

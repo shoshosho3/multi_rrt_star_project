@@ -28,10 +28,12 @@ def robot_position(robot, obstacles, prev_robots):
     :return: the new position of the robot
     """
     x, y = random_position(ROBOT_START_MIN_LOC, ROBOT_START_MAX_LOC, obstacles, HAS_OBSTACLE)
-    while any(math.dist((x, y), prev_robot) < ROBOT_START_MIN_DISTANCE for prev_robot in prev_robots):
+    while any(math.dist((x, y), ut.gps_to_floor(prev_robot)) < ROBOT_START_MIN_DISTANCE
+              for prev_robot in prev_robots):
         x, y = random_position(ROBOT_START_MIN_LOC, ROBOT_START_MAX_LOC, obstacles, HAS_OBSTACLE)
     x, y = ut.floor_to_gps((x, y))
     robot.getField(TRANSLATION).setSFVec3f([x, y, Z])
+    robot.getField(ROTATION).setSFRotation([0, 0, 1, 0])
     return x, y
 
 
@@ -46,6 +48,16 @@ class MyRobot:
         :param robot: supervisor
         """
         self.robots = get_robots(robot)
+        self.dirt_locs = []
+        self.dirt_cleaned = []
+
+    def set_dirt_patches(self, patches):
+        """
+        Set the dirt patches.
+        :param patches: the patches
+        """
+        self.dirt_locs = patches
+        self.dirt_cleaned = [False for _ in patches]
 
     def get_positions(self, is_gps=False):
         """
@@ -76,3 +88,17 @@ class MyRobot:
             x = int(FLOOR_LENGTH * (translation[0] + GROUND_X / 2) / GROUND_X)
             y = int(FLOOR_LENGTH * (-translation[1] + GROUND_Y / 2) / GROUND_Y)
             display.fillOval(x, y, 2 * Radius, 2 * Radius)
+
+        return self.are_all_patches_cleaned()
+
+    def are_all_patches_cleaned(self):
+        """
+        Check if all patches are cleaned
+        :param patches: the patches
+        :return: True if all patches are cleaned, False otherwise
+        """
+        translations = self.get_positions()
+        for i, patch in enumerate(self.dirt_locs):
+            if any(math.dist(translation, patch) < 2 for translation in translations):
+                self.dirt_cleaned[i] = True
+        return all(self.dirt_cleaned)

@@ -1,3 +1,5 @@
+import time
+import numpy as np
 from controller import Supervisor
 from consts import *
 import our_alg
@@ -5,10 +7,12 @@ from wall_utils import Wall
 from robot_utils import MyRobot
 from random_positions import random_position
 import random
+import csv
+import consts
 
 
 # Functions for dust generation and display updates
-def create_dust(display, obstacles):
+def create_dust(display, obstacles, patch_number):
     """
     Create dust patches on the display, avoiding obstacles.
     :param display: Display device to paste dust patches on.
@@ -16,7 +20,7 @@ def create_dust(display, obstacles):
     """
     patches = []
     background_dust = display.imageLoad(DUST_IMAGE)
-    for _ in range(PATCH_NUMBER):
+    for _ in range(patch_number):
         x, y = random_position(DIRT_MIN_LOC, DIRT_MAX_LOC, obstacles, HAS_OBSTACLE)
         patches.append((x, y))
         display.imagePaste(background_dust, x - DIRT_LOC_DELTA, y - DIRT_LOC_DELTA, False)
@@ -51,18 +55,38 @@ def sim_loop(robot: Supervisor, display, robots: MyRobot):
     :param display: Display device to update.
     :param robots: MyRobot object to update positions.
     """
-    while robot.step(TIME_STEP) != TERMINATE_TIME_STEP:
-        robots.display_robot_positions(display)
+    # while robot.step(TIME_STEP) != TERMINATE_TIME_STEP:
+    #     robots.display_robot_positions(display)
+
+    start = robot.getTime()
+
+    while not robots.display_robot_positions(display) and robot.getTime() - start < 600:
+        robot.step(TIME_STEP)
+
+    if robot.getTime() - start >= 600:
+        print("Simulation timed out.")
+
+    for i in range(2):
+        robot.step(TIME_STEP)
+
+    print(f"Simulation finished in {round(time.time() - start, 2)} seconds.")
+
+
+def log_to_csv(filename, patch_number, robot_number, seed, alg_time, success, run_time, total_time, price):
+    # Define the data to be appended
+    data = [patch_number, robot_number, seed, alg_time, success, run_time, total_time, price]
+
+    # Open the file in append mode
+    with open(filename, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        # Write the data row
+        writer.writerow(data)
+    print(f"Data appended to {filename}: {data}")
 
 
 # Main function to initialize and start the simulation
 def main():
-
-    random.seed(42)
-
     print('Starting supervisor...')
-
-    battery_mode = True
 
     # Setup simulation environment
     robot = Supervisor()
@@ -70,25 +94,68 @@ def main():
     # Initialize devices and objects
     display = robot.getDevice(DISPLAY)
     emitter = robot.getDevice(EMITTER)
-    my_bots = MyRobot(robot)
 
-    # initialize random walls and create obstacle matrix based on them
-    walls = Wall(robot, battery_mode)
-    walls.set_random_positions()
-    obstacles = walls.get_obstacle_matrix(DIRT_DELTA)
+    for robot_number in range(2):
 
-    # Set random positions for robots and create dust patches
-    my_bots.set_random_positions(obstacles)
-    dirt_locs = create_dust(display, obstacles)
-    recharge_locs = walls.get_recharger_positions()
-    paths = get_paths(my_bots, dirt_locs, walls)
-    obstacles = [list(row) for row in obstacles]
-    send_message((paths, recharge_locs, obstacles), emitter)
+        try:
+            robot.getFromDef(f'robot_{6 - robot_number}').remove()
+        except:
+            pass
 
-    # Display setup and simulation loop
-    display.setAlpha(TRANSPARENCY)
-    sim_loop(robot, display, my_bots)
-    robot.cleanup()
+        # if robot_number < 2:
+        #     continue
+
+        print(f'----------------------------------- Robot Number: {5 - robot_number} '
+              f'-----------------------------------')
+
+        for patch_number in range(1, 16):
+
+            print(
+                f'----------------------------------- Patch Number: {patch_number} -----------------------------------')
+
+            for seed in range(20):
+                print(f'----------------------------------- Seed: {seed} -----------------------------------')
+                random.seed(seed)
+                np.random.seed(seed)
+
+                start_time = time.time()
+
+                battery_mode = False
+
+                my_bots = MyRobot(robot)
+
+                # initialize random walls and create obstacle matrix based on them
+                walls = Wall(robot, battery_mode)
+                walls.set_random_positions()
+                obstacles = walls.get_obstacle_matrix(DIRT_DELTA)
+
+                # Set random positions for robots and create dust patches
+                my_bots.set_random_positions(obstacles)
+                dirt_locs = create_dust(display, obstacles, patch_number)
+                my_bots.set_dirt_patches(dirt_locs)
+                recharge_locs = walls.get_recharger_positions()
+                alg_start_time = time.time()
+                did_succeed, paths, price = get_paths(my_bots, dirt_locs, walls)
+                alg_time = time.time() - alg_start_time
+                obstacles = [list(row) for row in obstacles]
+
+                send_message((paths, recharge_locs, obstacles), emitter)
+
+                # Display setup and simulation loop
+                display.setAlpha(TRANSPARENCY)
+                # run_start_time = time.time()
+                run_start_time = robot.getTime()
+                sim_loop(robot, display, my_bots)
+                # run_time = time.time() - run_start_time
+                run_time = robot.getTime() - run_start_time
+                total_time = time.time() - start_time
+                log_to_csv(CSV_NAME, patch_number, robot_number, seed,
+                           alg_time, did_succeed, run_time, total_time, price)
+
+                for bot in my_bots.robots:
+                    bot.resetPhysics()
+
+    send_message(([[TERMINATE_TIME_STEP] for _ in range(len(my_bots.robots))], None, None), emitter)
 
 
 # Run the main function

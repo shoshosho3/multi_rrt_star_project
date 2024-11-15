@@ -229,7 +229,14 @@ class GotoRobot:
         :param to_charge: whether the robot is going to charge
         :param cost_left: cost left to reach all targets
         """
+        prev_pos = self.get_gps_position()
         while self.robot.step(TIME_STEP) != TERMINATE_TIME_STEP:
+
+            if math.dist(prev_pos, self.get_gps_position()) > 0.2:
+                # print(f"changed position")
+                self.stop()
+                return False
+            prev_pos = self.get_gps_position()
 
             # Get the robot's current bearing and angle to the target
             current_bearing = self.get_bearing()
@@ -271,6 +278,7 @@ class GotoRobot:
 
         # Stop the robot
         self.stop()
+        return True
 
     def receive_path(self, start):
         """
@@ -283,13 +291,16 @@ class GotoRobot:
             # get the message from the supervisor
             message = self.receiver.getString()
             paths, recharge_locs, mat = ast.literal_eval(message)  # Convert string back to list
-            print(f"{self.name} received paths")
+            # print(f"{self.name} received paths")
 
             for path in paths:
 
                 # check if the path is empty
                 if len(path) == 0:
                     continue
+
+                if path == [TERMINATE_TIME_STEP]:
+                    return path, recharge_locs, mat
 
                 # get start of path and start of robot
                 x1, y1 = path[0]
@@ -302,3 +313,16 @@ class GotoRobot:
 
         # Return None if no path is found
         return None, None, None
+
+    def reset_all(self):
+        """
+        Resets the robot's devices and sensors.
+        """
+        self.left_motor.setVelocity(NULL_SPEED)
+        self.right_motor.setVelocity(NULL_SPEED)
+        self.battery_level = FULL_BATTERY
+        self.consumption_rate = random.uniform(CONSUMPTION_RATE_LOWER, CONSUMPTION_RATE_UPPER)
+        self.nearby_charging_station = False
+        # self.left_position_sensor.setPosition(float('inf'))
+        # self.right_position_sensor.setPosition(float('inf'))
+        self.robot.resetPhysics()

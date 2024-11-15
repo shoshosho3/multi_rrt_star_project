@@ -12,11 +12,10 @@ def wait_for_path(robot):
     """
     robot.passive_wait(WAIT_TIME)
     path, recharge, mat = robot.receive_path(ut.gps_to_floor(robot.get_gps_position()))
-    additional_time = 0
-    while path is None:
-        robot.passive_wait(WAIT_TIME + additional_time)
-        additional_time += 1
-        path, recharge, mat = robot.receive_path(ut.gps_to_floor(robot.get_gps_position()))
+    # additional_time = 0
+    # robot.passive_wait(WAIT_TIME + additional_time)
+    # additional_time += 1
+    # path, recharge, mat = robot.receive_path(ut.gps_to_floor(robot.get_gps_position()))
     return path, recharge, mat
 
 
@@ -55,20 +54,30 @@ def goto_path(robot, path, recharge, obstacle_matrix):
     for i, loc in enumerate(path):
         next_pos = ut.floor_to_gps(loc)
         if i == len(path) - 1:
-            robot.goto(next_pos, recharges, obstacle_matrix, cost_left=0)
+            answer = robot.goto(next_pos, recharges, obstacle_matrix, cost_left=0)
         else:
-            robot.goto(next_pos, recharges, obstacle_matrix, cost_left=costs[i + 1])
+            answer = robot.goto(next_pos, recharges, obstacle_matrix, cost_left=costs[i + 1])
+        if not answer:
+            break
+
+    # robot.reset_all()
 
 
 def main():
     # initialize the robot
     robot = GotoRobot()
 
-    # wait for the path
-    path, recharge, mat = wait_for_path(robot)
+    path = None
 
-    # go to the path
-    goto_path(robot, path, recharge, mat)
+    while path != [TERMINATE_TIME_STEP]:
+
+        # wait for the path
+        path, recharge, mat = wait_for_path(robot)
+
+        if path is not None and path != [TERMINATE_TIME_STEP]:
+            # go to the path
+            goto_path(robot, path, recharge, mat)
+            # print('Path completed')
 
 
 if __name__ == "__main__":
