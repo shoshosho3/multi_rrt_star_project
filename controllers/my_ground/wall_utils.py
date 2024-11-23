@@ -200,7 +200,7 @@ class Wall:
             x, y, x_size, y_size = get_wall_random_position_and_size()
             while min_dist_to_wall(get_wall_corners(x, y, x_size, y_size), prev_walls) < MIN_WALL_DISTANCE:
                 x, y, x_size, y_size = get_wall_random_position_and_size(True)
-            prev_walls.append(get_wall_corners(x, y, x_size, y_size))
+            prev_walls.append(get_wall_corners(x, y, CHARGER_SIZE, CHARGER_SIZE))
             recharger.getField(TRANSLATION).setSFVec3f([x, y, Z])
             recharger.getField(SIZE).setSFVec3f([CHARGER_SIZE, CHARGER_SIZE, CHARGER_SIZE])
             recharger.getField(ROTATION).setSFRotation([0, 0, 1, 0])
@@ -218,6 +218,11 @@ class Wall:
 
         # avoid colliding with side walls
         for i in range(delta):
+            for j in range(FLOOR_LENGTH):
+                obstacles_matrix[i][j] = HAS_OBSTACLE
+                obstacles_matrix[j][i] = HAS_OBSTACLE
+
+        for i in range(FLOOR_LENGTH - delta, FLOOR_LENGTH):
             for j in range(FLOOR_LENGTH):
                 obstacles_matrix[i][j] = HAS_OBSTACLE
                 obstacles_matrix[j][i] = HAS_OBSTACLE

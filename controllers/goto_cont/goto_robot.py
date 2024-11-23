@@ -69,6 +69,8 @@ class GotoRobot:
         self.consumption_rate = random.uniform(CONSUMPTION_RATE_LOWER, CONSUMPTION_RATE_UPPER)
         self.nearby_charging_station = False  # Mocked initially
 
+        self.position_change_ok = False
+
     def get_gps_position(self):
         """
         Returns the (x, y) coordinates from GPS
@@ -149,17 +151,19 @@ class GotoRobot:
 
         # getting the minimum distance to the nearest charging station
         min_dist = self.min_distance(recharge_locations)[0]
-
-        # if the battery is low and the robot closer to the charging station than all targets
-        if (min_dist < cost_left + self.calculate_distance(target) and
-                self.battery_level <= self.min_distance(recharge_locations)[0] * self.consumption_rate * 60):
-            print(f"{self.name} warning: Low battery! Returning to charging station.")
-            self.return_to_charge(recharge_locations, obstacle_matrix, target)
+        cost_left = cost_left / FLOOR_LENGTH * GPS_LENGTH
 
         # if the battery is moderately low and the robot is close to a charging station
-        elif self.battery_level <= self.critical_battery_level and min_dist < CHARGING_DISTANCE:
+        if self.battery_level <= self.critical_battery_level and min_dist < CHARGING_DISTANCE:
             print(f"{self.name} battery is moderately low. Opportunity to recharge nearby.")
             self.charge_battery()
+
+        # if the battery is low and the robot closer to the charging station than all targets
+        elif (min_dist < cost_left + self.calculate_distance(target) and
+              self.battery_level <= self.min_distance(recharge_locations)[0] * self.consumption_rate * 60):
+            print(f"{self.name} warning: Low battery! Returning to charging station.")
+            self.return_to_charge(recharge_locations, obstacle_matrix, target)
+            self.position_change_ok = True
 
     def min_distance(self, recharge_locations):
         """
@@ -170,7 +174,6 @@ class GotoRobot:
         min_loc = recharge_locations[0]
         min_dist = self.calculate_distance(min_loc)
         for loc in recharge_locations:
-            # dist = abs(loc[0] - self.get_gps_position()[0]) + abs(loc[1] - self.get_gps_position()[1])
             dist = self.calculate_distance(loc)
             if dist < min_dist:
                 min_dist = dist
@@ -188,9 +191,16 @@ class GotoRobot:
         min_loc = self.min_distance(recharge_locations)[1]
 
         # getting the path to the charging station
-        path = run_rrt_star(self.get_gps_position(), min_loc, obstacle_matrix)
+        path = run_rrt_star(self.get_gps_position(), min_loc, obstacle_matrix, True)
 
-        # checking if the path is found
+        # checking if the path is found, if not, try another charging station
+        while path is None and len(recharge_locations) > 1:
+            print(f'No path found to charging station {min_loc}. Trying another station...')
+            recharge_locations.remove(min_loc)
+            min_loc = self.min_distance(recharge_locations)[1]
+            print(f'new recharge location: {min_loc}')
+            path = run_rrt_star(self.get_gps_position(), min_loc, obstacle_matrix, True)
+
         if path is None:
             print(f"{self.name} could not find a path to the charging station.")
             return
@@ -203,7 +213,7 @@ class GotoRobot:
         if self.calculate_distance(min_loc) < CHARGING_DISTANCE:
             self.charge_battery()
 
-        path = run_rrt_star(self.get_gps_position(), next_target, obstacle_matrix)
+        path = run_rrt_star(self.get_gps_position(), next_target, obstacle_matrix, False)
 
         # checking if the path is found
         if path is None:
@@ -215,10 +225,14 @@ class GotoRobot:
             self.goto(loc, recharge_locations, obstacle_matrix, to_charge=True)
 
     def charge_battery(self):
+        """
+        Charges the battery
+        """
         print(f"{self.name} charging battery...")
         self.stop()
         self.passive_wait(CHARGING_TIME / (FULL_BATTERY - self.battery_level))
         self.battery_level = FULL_BATTERY
+        print('Battery charged for ', self.name)
 
     def goto(self, target_position, recharge_locations, obstacle_matrix, to_charge=False, cost_left=float('inf')):
         """
@@ -229,13 +243,17 @@ class GotoRobot:
         :param to_charge: whether the robot is going to charge
         :param cost_left: cost left to reach all targets
         """
+
         prev_pos = self.get_gps_position()
         while self.robot.step(TIME_STEP) != TERMINATE_TIME_STEP:
 
-            if math.dist(prev_pos, self.get_gps_position()) > 0.2:
-                # print(f"changed position")
+            # Check if a new simulation started
+            if self.position_change_ok: # Changed because of going to charge
+                self.position_change_ok = False
+            elif math.dist(prev_pos, self.get_gps_position()) > DIST_CHANGE:
                 self.stop()
                 return False
+
             prev_pos = self.get_gps_position()
 
             # Get the robot's current bearing and angle to the target
@@ -290,8 +308,17 @@ class GotoRobot:
 
             # get the message from the supervisor
             message = self.receiver.getString()
-            paths, recharge_locs, mat = ast.literal_eval(message)  # Convert string back to list
-            # print(f"{self.name} received paths")
+            paths, recharge_locs, mat, seed = ast.literal_eval(message)  # Convert string back to list
+
+            # reset the battery level and consumption rate
+            self.battery_level = FULL_BATTERY
+            num = self.name[-2]
+            if not num.isdigit():
+                num = 0
+            else:
+                num = int(num)
+            random.seed(seed + num)
+            self.consumption_rate = random.uniform(CONSUMPTION_RATE_LOWER, CONSUMPTION_RATE_UPPER)
 
             for path in paths:
 
@@ -313,16 +340,3 @@ class GotoRobot:
 
         # Return None if no path is found
         return None, None, None
-
-    def reset_all(self):
-        """
-        Resets the robot's devices and sensors.
-        """
-        self.left_motor.setVelocity(NULL_SPEED)
-        self.right_motor.setVelocity(NULL_SPEED)
-        self.battery_level = FULL_BATTERY
-        self.consumption_rate = random.uniform(CONSUMPTION_RATE_LOWER, CONSUMPTION_RATE_UPPER)
-        self.nearby_charging_station = False
-        # self.left_position_sensor.setPosition(float('inf'))
-        # self.right_position_sensor.setPosition(float('inf'))
-        self.robot.resetPhysics()

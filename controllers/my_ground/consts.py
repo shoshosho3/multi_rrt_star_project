@@ -1,7 +1,7 @@
 SEED = 0
 PATCH_NUMBER = 1
-
-
+MIN_ROBOTS = 1
+MAX_ROBOTS = 5
 GROUND_X = 9.9
 GROUND_Y = 9.9
 Radius = 3.5
@@ -59,8 +59,15 @@ MAX_TURN_TIME = 2
 RECHARGE_NUMBER = 4
 CHARGER_SIZE = 0.5
 ALLOCATION_TRIES = 5
+PATCH_NUMBERS = range(1, 16)
+SEEDS = range(20)
+NEW_OBS_DELTA = 10
+PRICE_LIMIT = 4000
+TIMEOUT = 600
+END_STEP_NUM = 2
 
-CSV_NAME = 'very_new_time.csv'
+CSV_NAME = 'results_csvs/results.csv'
+CSV_BATTERY_NAME = 'results_csvs/battery_results.csv'
 SIZE = 'size'
 ROTATION = 'rotation'
 ROBOT = 'robot'
@@ -83,7 +90,7 @@ LED_STEP = "led_step"
 DISPLAY = "ground_display"
 TRANSLATION = "translation"
 EMITTER = "emitter"
-DUST_IMAGE = "dust_resized_circ_20.png"
+DUST_IMAGE = "dust_images/dust_resized_circ_20.png"
 RECHARGE_IMAGE = 'yellow_resized_circ_20.png'
 
 SUCCESS = True

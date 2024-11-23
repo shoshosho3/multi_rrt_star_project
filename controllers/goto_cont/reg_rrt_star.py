@@ -2,6 +2,7 @@ import numpy as np
 import random
 from consts import *
 import unit_transformations as ut
+import matplotlib.pyplot as plt
 
 
 class Node:
@@ -148,7 +149,30 @@ def path_to_goal(goal_node):
     return path[::-1]
 
 
-def run_rrt_star(start, goal, obstacle_matrix, max_iterations=MAX_ITERATIONS_REG_RRT,
+def out_of_bounds(position, obstacle_matrix):
+    if (position[0] < 0 or position[0] >= FLOOR_LENGTH or
+            position[1] < 0 or position[1] >= FLOOR_LENGTH):
+        return True
+    if obstacle_matrix[position[0]][position[1]]:
+        return True
+    return False
+
+
+def plot_obstacles(obstacles, start, goal):
+    """
+    Plot the obstacles on the floor.
+    :param obstacles: 2D array of obstacles on the floor.
+    """
+    for i in range(FLOOR_LENGTH):
+        for j in range(FLOOR_LENGTH):
+            if obstacles[i][j] == HAS_OBSTACLE:
+                plt.plot(i, j, 'ks', markersize=WALL_WIDTH)
+
+    plt.plot(start[0], start[1], 'ro', markersize=5)
+    plt.plot(goal[0], goal[1], 'go', markersize=5)
+
+
+def run_rrt_star(start, goal, obstacle_matrix, to_battery, max_iterations=MAX_ITERATIONS_REG_RRT,
                  max_step_size=STEP_SIZE, radius=RADIUS):
     """
     Runs the RRT* algorithm from a start point to a goal on a grid with obstacles.
@@ -167,25 +191,45 @@ def run_rrt_star(start, goal, obstacle_matrix, max_iterations=MAX_ITERATIONS_REG
     """
     final_path = None
     start = ut.gps_to_floor(start)
+    start = (start[0], FLOOR_LENGTH - start[1])
     goal = ut.gps_to_floor(goal)
+    goal = (goal[0], FLOOR_LENGTH - goal[1])
     start_node = Node(start)
     tree = [start_node]
     best_cost = float('inf')
 
     i = 0
 
+    # plot_obstacles(obstacle_matrix, start, goal)
+    # plt.show()
+
     while i < max_iterations or (final_path is None and i < max_iterations * 2):
         i += 1
         # Sample a random point, biased towards the goal
+        # print(goal)
         if random.random() < RANDOM_POINT_THRESHOLD:
-            random_point = goal
+            if to_battery:
+                rand_x_close_to_goal = random.randint(goal[0] - 100, goal[0] + 100)
+                rand_y_close_to_goal = random.randint(goal[1] - 100, goal[1] + 100)
+                random_point = (rand_x_close_to_goal, rand_y_close_to_goal)
+                while out_of_bounds(random_point, obstacle_matrix):
+                    rand_x_close_to_goal = random.randint(goal[0] - 100, goal[0] + 100)
+                    rand_y_close_to_goal = random.randint(goal[1] - 100, goal[1] + 100)
+                    random_point = (rand_x_close_to_goal, rand_y_close_to_goal)
+            else:
+                random_point = goal
         else:
             random_point = (
                 random.randint(0, FLOOR_LENGTH), random.randint(0, FLOOR_LENGTH - 1))
 
+            while out_of_bounds(random_point, obstacle_matrix):
+                random_point = (
+                    random.randint(0, FLOOR_LENGTH), random.randint(0, FLOOR_LENGTH - 1))
+
         # Find the nearest node in the tree and steer towards the random point
         nearest = nearest_node(tree, random_point)
         new_position = steer(nearest.position, random_point, max_step_size)
+
 
         # Skip if new position is out of bounds or in an obstacle
         if (new_position[0] < 0 or new_position[0] >= FLOOR_LENGTH or
@@ -195,35 +239,41 @@ def run_rrt_star(start, goal, obstacle_matrix, max_iterations=MAX_ITERATIONS_REG
             continue
 
         # Check for collision-free path and add new node if valid
-        if not check_collision(nearest.position, new_position, obstacle_matrix):
-            new_node = Node(new_position)
-            new_node.parent = nearest
-            new_node.cost = nearest.cost + euclidean_distance(nearest.position, new_position)
+        # if not check_collision(nearest.position, new_position, obstacle_matrix):
+        new_node = Node(new_position)
+        new_node.parent = None
+        new_node.cost = float('inf')
 
-            # Rewire if a cheaper path through new_node is found
-            neighbors = get_neighbors(tree, new_node, radius)
-            for neighbor in neighbors:
-                cost = neighbor.cost + euclidean_distance(neighbor.position, new_position)
-                if cost < new_node.cost and not check_collision(neighbor.position, new_position, obstacle_matrix):
-                    new_node.parent = neighbor
-                    new_node.cost = cost
+        # Rewire if a cheaper path through new_node is found
+        neighbors = get_neighbors(tree, new_node, radius)
+        for neighbor in neighbors:
+            cost = neighbor.cost + euclidean_distance(neighbor.position, new_position)
+            if cost < new_node.cost and not check_collision(neighbor.position, new_position, obstacle_matrix):
+                new_node.parent = neighbor
+                new_node.cost = cost
 
-            # Update neighbors if rewiring through new_node offers a cost reduction
-            for neighbor in neighbors:
-                cost = new_node.cost + euclidean_distance(new_node.position, neighbor.position)
-                if cost < neighbor.cost and not check_collision(new_node.position, neighbor.position, obstacle_matrix):
-                    neighbor.parent = new_node
-                    neighbor.cost = cost
+        if new_node.parent is None:
+            continue
 
-            tree.append(new_node)
+        # Update neighbors if rewiring through new_node offers a cost reduction
+        for neighbor in neighbors:
+            cost = new_node.cost + euclidean_distance(new_node.position, neighbor.position)
+            if cost < neighbor.cost and not check_collision(new_node.position, neighbor.position, obstacle_matrix):
+                neighbor.parent = new_node
+                neighbor.cost = cost
 
-            # Check if goal is reached and update the best path if found
-            if (euclidean_distance(new_position, goal) < CHARGING_DISTANCE / GPS_LENGTH * FLOOR_LENGTH
-                    and new_node.cost < best_cost):
-                best_cost = new_node.cost
-                final_path = []
-                get_path = path_to_goal(new_node)
-                for loc in get_path:
-                    final_path.append(ut.floor_to_gps(loc))
+        tree.append(new_node)
+
+        # Check if goal is reached and update the best path if found
+        if to_battery:
+            d = ((CHARGING_DISTANCE - DISTANCE_THRESHOLD) / GPS_LENGTH) * FLOOR_LENGTH
+        else:
+            d = DISTANCE_TO_NEXT
+        if euclidean_distance(new_position, goal) < d and new_node.cost < best_cost:
+            best_cost = new_node.cost
+            final_path = []
+            get_path = path_to_goal(new_node)
+            for loc in get_path:
+                final_path.append(ut.floor_to_gps((loc[0], FLOOR_LENGTH - loc[1])))
 
     return final_path

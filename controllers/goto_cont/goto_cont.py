@@ -12,10 +12,6 @@ def wait_for_path(robot):
     """
     robot.passive_wait(WAIT_TIME)
     path, recharge, mat = robot.receive_path(ut.gps_to_floor(robot.get_gps_position()))
-    # additional_time = 0
-    # robot.passive_wait(WAIT_TIME + additional_time)
-    # additional_time += 1
-    # path, recharge, mat = robot.receive_path(ut.gps_to_floor(robot.get_gps_position()))
     return path, recharge, mat
 
 
@@ -60,8 +56,6 @@ def goto_path(robot, path, recharge, obstacle_matrix):
         if not answer:
             break
 
-    # robot.reset_all()
-
 
 def main():
     # initialize the robot
@@ -77,7 +71,6 @@ def main():
         if path is not None and path != [TERMINATE_TIME_STEP]:
             # go to the path
             goto_path(robot, path, recharge, mat)
-            # print('Path completed')
 
 
 if __name__ == "__main__":

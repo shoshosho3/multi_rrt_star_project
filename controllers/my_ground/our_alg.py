@@ -1,12 +1,10 @@
 import numpy as np
-from tqdm import tqdm
 from typing import List, Tuple
 from consts import *
 import warnings
 from plots import create_plot
 from wall_utils import Wall
 from rrt_solver import NewRRTSolver
-import time
 
 
 def full_round(x):
@@ -48,24 +46,13 @@ def run_solver(solver: NewRRTSolver):
         return None, None
 
     # allocate the goals
-    goals = None, None
     goals, price = solver.random_allocate_goals(10000)
-    # for i in range(ALLOCATION_TRIES):
-    #     # start_time = time.time()
-    #     goals = solver.random_allocate_goals(10000)
-    #     # print(f'time to allocate goals: {time.time() - start_time}')
-    #     if goals[0] is not None:
-    #         break
-    #     for _ in tqdm(range(MAX_ITERATIONS_OUR // 5)):
-    #         solver.random_expend_tree()
 
     # check if there is no allocation, if so return None
     if goals is None:
         print('not found collision free allocation')
         goals, price = solver.random_allocate_goals(10000, False)
         return FAILURE, goals, price
-        # print('no allocation')
-        # return None, None
 
     # return the allocation and the paths
     return SUCCESS, goals, price
@@ -170,15 +157,12 @@ def run(dirt_locations: List[Tuple[int, int]], starts: List[tuple], walls: Wall)
 
     # getting the tree paths
     did_succeed, goals, price = run_solver(solver)
-    # if al is None:  # no legal allocation found
-    #     return [[] for _ in range(len(starts))]
     final_tree_paths = [[key] + [p + len(goals) for p in value] for key, value in enumerate(goals)]
-    # print(f'final paths by tree ids: {final_tree_paths}')
 
     # getting the paths
     paths = get_paths(final_tree_paths, dirt_locations, starts, solver)
 
     # create plot
-    # create_plot(obstacles, dirt_locations, starts, paths, solver)
+    create_plot(obstacles, dirt_locations, starts, paths, solver)
 
     return did_succeed, paths, price
