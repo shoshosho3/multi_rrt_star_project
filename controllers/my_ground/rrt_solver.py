@@ -7,6 +7,15 @@ from segment import SegmentDistance
 
 
 def organize_possible_connections(new_node, neighbors, check_collision, between_trees=False):
+    """
+    Organize the possible connections between a new node and its neighbors.
+    Sorted by connection cost.
+
+    new_node: A node to be added in the rrt* algorithm
+    neighbors: All nodes in the tree that are at distance 'radius' at most.
+    check_collision: # obstacle collision checking function
+    between_trees: If the tree of neighbors is different from the tree of new_node
+    """
     possible_connections = []
     for neighbor in neighbors:
         connection = Connection(neighbor, new_node, check_collision, between_trees)
@@ -16,7 +25,16 @@ def organize_possible_connections(new_node, neighbors, check_collision, between_
 
 
 def new_choose_parent(new_node, possible_connections, target_tree, c_best):
+    """
+    Choose a parent to new_node from possible_connections.
+
+    possible_connections: connections of parent candidates of new_node.
+    from the same tree of new_node (different from target_tree).
+    target_tree: The tree new_node tries to connect to.
+    c_best: The current best cost to connect target_tree to the tree of new_node.
+    """
     for connection in possible_connections:
+        # if the connection can result in improvement and is valid
         if connection.get_is_valid():
             new_node.cost = connection.cost()
             new_node.parent = connection.node1
@@ -28,9 +46,10 @@ def new_choose_parent(new_node, possible_connections, target_tree, c_best):
 def new_make_children(new_node, possible_connections):
     for connection in possible_connections:
         neighbor = connection.node1
-        # goto new + goto neighbor + neighbor_to_new - goto neighbor < goto neighbor
+        # If rewiring will reduce cost and is valid
         if new_node.cost + connection.length < neighbor.cost:
             if connection.get_is_valid():
+                # rewire
                 old_parent = neighbor.parent
                 if old_parent is not None:
                     old_parent.children.remove(neighbor)
@@ -45,6 +64,20 @@ class NewRRTSolver:
                  steer_step_size, is_coords_valid, obstacles,
                  p_vertex_contraction, min_drive_speed, max_drive_speed,
                  max_turn_time, collision_distance):
+        """
+        robot_sources: a list of robot coordinates
+        goal_sources: a list of goal coordinates
+        bounds: the bound to the space. [[low_bound1, low_bound2], [high bound1, high bound2]]
+        p_task_space: probability of sampling point using a heuristic for connecting two trees
+        steer_step_size: The max step size in rrt*
+        is_coords_valid: function checking if coords not collide with obstacles.
+        collision_step_size: step size when checking for obstacle collision between point.
+        p_vertex_contraction: probability of vertex contraction in rrt*
+        min_drive_speed: The mininal drive speed of the robot.
+        max_drive_speed: The maximal drive speed of the robot.
+        max_turn_time: The maximal time a robot will spend in a point (to turn or other).
+        collision_distance: the maximal distance between two robots to be considered collision.
+        """
         self.trees, self.robot_trees, self.goal_trees = init_trees(robot_sources, goal_sources)
         self.bounds = bounds
         self.p_task_space = p_task_space
@@ -59,6 +92,9 @@ class NewRRTSolver:
         self.obstacles = obstacles
 
     def expend_tree(self, expended_tree, target_tree):
+        """
+        Add one node to expended_tree in the direction of target_tree
+        """
         sampled_point = self.sample_point(expended_tree, target_tree)
         nearest_node = expended_tree.find_nearest(sampled_point)
         new_coords = self.steer(nearest_node.coordinates, sampled_point)
@@ -86,20 +122,24 @@ class NewRRTSolver:
         self.expend_tree(expended_tree, target_tree)
 
     def get_trees_connection(self, tree1, tree2):
+        """Get the connection between two trees"""
         tree_ids = tuple(sorted((tree1.tree_id, tree2.tree_id)))
         return self.tree_connections.get(tree_ids)
 
     def get_c_best(self, tree1, tree2):
+        """Get the current best distance between tree1 and tree2"""
         connection = self.get_trees_connection(tree1, tree2)
         if connection is None:
             return float('inf')
         return connection.cost()
 
     def set_c_best(self, tree1, tree2, c_best, tree_connection):
+        """Set the current best distance between tree1 and tree2"""
         tree_ids = tuple(sorted((tree1.tree_id, tree2.tree_id)))
         self.tree_connections[tree_ids] = tree_connection
 
     def try_connect_graphs(self, expended_tree, new_node):
+        """Attempt to connect new_node to valid trees"""
         for connect_tree in self.trees:
             if not is_tree_pair_valid(expended_tree, connect_tree):
                 continue
@@ -109,6 +149,7 @@ class NewRRTSolver:
                 self.set_c_best(expended_tree, connect_tree, connection.cost(), connection)
 
     def connect_graphs(self, target_tree, new_node, c_best):
+        """Attempt to connect new_nod to a specific tree"""
         target_nearest = target_tree.find_nearest(new_node.coordinates)
         target_neighbors = target_tree.get_neighbors(new_node.coordinates, self.steer_step_size * 2)
         possible_connections = organize_possible_connections(new_node, target_neighbors, self.check_collision,
@@ -120,6 +161,7 @@ class NewRRTSolver:
         return None
 
     def branch_and_bound(self, expended_tree):
+        """Prune nodes that are unlikely to result in cost reduction"""
         if self.is_tree_connected(expended_tree):
             expended_tree.branch_and_bound(self)
 
@@ -130,6 +172,7 @@ class NewRRTSolver:
         return self.basic_sample(expended_tree, target_tree)
 
     def random_vertex_contraction(self, node):
+        """Attempt to contract the path from node to its root"""
         p = np.random.rand()
         if p > self.p_vertex_contraction:
             return
@@ -142,7 +185,8 @@ class NewRRTSolver:
         ancestor_node = path[ancestor_idx]
 
         if not self.check_collision(descendant_node.coordinates, ancestor_node.coordinates):
-            cost_diff = ancestor_node.cost + coords_dist(descendant_node.coordinates, ancestor_node.coordinates) - descendant_node.cost
+            cost_diff = ancestor_node.cost + coords_dist(descendant_node.coordinates,
+                                                         ancestor_node.coordinates) - descendant_node.cost
             descendant_node.update_cost(cost_diff)
             old_parent = descendant_node.parent
             if old_parent is not None:
@@ -151,6 +195,7 @@ class NewRRTSolver:
             descendant_node.parent = ancestor_node
 
     def sample_task_space(self, expended_tree, target_tree):
+        """Greedy sampling"""
         closest_node = expended_tree.find_nearest(target_tree.root.coordinates)
         dist = coords_dist(closest_node.coordinates, target_tree.root.coordinates)
         if dist < self.steer_step_size:
@@ -161,12 +206,12 @@ class NewRRTSolver:
 
     def basic_sample(self, expended_tree, target_tree):
         c_best = self.get_c_best(expended_tree, target_tree)
-        if c_best == float('inf'):
+        if c_best == float('inf'):  # if trees aren't connected
             return np.random.uniform(self.bounds[0], self.bounds[1])
         x_goal = target_tree.root.coordinates
         x_start = expended_tree.root.coordinates
         sampler = InformedSampler(x_goal, x_start)
-        if c_best <= sampler.cmin:
+        if c_best <= sampler.cmin:  # if optimal cost
             return np.random.uniform(self.bounds[0], self.bounds[1])
 
         return sampler.sample(c_best)
@@ -184,6 +229,7 @@ class NewRRTSolver:
         return coord1 + direction * self.steer_step_size
 
     def sample_trees(self):
+        """Sample a tree pair to expand"""
         expended_tree, target_tree = np.random.choice(self.trees, 2)
         while not is_tree_pair_valid(expended_tree, target_tree):
             expended_tree, target_tree = np.random.choice(self.trees, 2)
@@ -210,6 +256,9 @@ class NewRRTSolver:
         return unconnected
 
     def is_tree_connected(self, tree):
+        """
+        Check if all valid tree couples of 'tree' are connected.
+        """
         for other_tree in self.trees:
             if not is_tree_pair_valid(other_tree, tree):
                 continue
@@ -255,12 +304,18 @@ class NewRRTSolver:
         return False
 
     def are_trees_connected(self):
+        """
+        Check if all valid tree couples are connected.
+        """
         for i, tree in enumerate(self.trees):
             if not self.is_tree_connected(tree):
                 return False
         return True
 
     def extract_connection_path(self, start_tree, goal_tree):
+        """
+        Extract the path from start_tree's root to goal_tree's root.
+        """
         connection = self.get_trees_connection(start_tree, goal_tree)
         start_connection = connection.node1 if connection.node1.tree == start_tree else connection.node2
         goal_connection = connection.node1 if connection.node1.tree == goal_tree else connection.node2
@@ -269,11 +324,20 @@ class NewRRTSolver:
         return start_part[::-1] + goal_part
 
     def line_segments_intersect(self, start1, end1, start2, end2):
+        """
+        Compute if two line segments intersect in space.
+        """
         distance = SegmentDistance.compute_distance(start1, end1, start2, end2).distance
         return distance < self.collision_distance
 
     def is_collision_path_one_side(self, start1node, end1node, start1low, end1up,
                                    concat_path2, low_bound2, idx2):
+        """
+        Check if one connection intersect a path in time and space.
+        Used in is_collision_path
+
+        idx2: Starting index to check from in path2
+        """
         if idx2 >= len(concat_path2) - 1:
             return False
         start2node, end2node = concat_path2[idx2], concat_path2[idx2 + 1]
@@ -289,6 +353,9 @@ class NewRRTSolver:
 
     def is_collision_path(self, concat_path1, low_bound1, up_bound1,
                           concat_path2, low_bound2, up_bound2):
+        """
+        Check if two paths are colliding in time and space.
+        """
         idx1, idx2 = 0, 0
         while idx1 < len(concat_path1) - 1 and idx2 < len(concat_path2) - 1:
             start1node, start2node = concat_path1[idx1], concat_path2[idx2]
@@ -320,6 +387,10 @@ class NewRRTSolver:
         return False
 
     def concat_path(self, path, robot_idx):
+        """
+        Concatinate a path made out of sub-paths to a single path.
+        Compute time bounds to entering and exiting every node.
+        """
         prev_node = self.robot_trees[robot_idx].root
         concat_path_ = [prev_node, prev_node]
         low_bound = [0, 0]
@@ -345,6 +416,10 @@ class NewRRTSolver:
         return concat_path_, low_bound, up_bound
 
     def concat_paths(self, paths):
+        """
+        For every robot, concatinate the given path made out of sub-paths to a single path.
+        Compute time bounds to entering and exiting every node.
+        """
         concat_paths_, low_bounds, up_bounds = [], [], []
         for idx in range(len(self.robot_trees)):
             concat_path_, low_bound, up_bound = self.concat_path(paths[idx], idx)
