@@ -7,7 +7,7 @@ def main():
 
     # True - run series of simulations
     # False - run single simulation
-    run_simulations_mode = True
+    run_simulations_mode = False
 
     # True - save the results of the simulation
     # False - do not save the results of the simulation
@@ -18,9 +18,9 @@ def main():
     max_robots = 5
 
     # for single simulation mode
-    robot_number = 1
+    robot_number = 2
     seed = 42
-    patch_number = 7
+    patch_number = 5
 
     print('Starting supervisor...')
 
